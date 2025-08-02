@@ -1,0 +1,130 @@
+/* Custom Calendar Styles */
+
+.rbc-calendar {
+    height: 100% !important;
+}
+
+.rbc-toolbar {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    margin-bottom: 1rem !important;
+    padding: 0.5rem !important;
+    background-color: var(--card) !important;
+    border-radius: var(--radius-md) !important;
+    border: 1px solid var(--border) !important;
+}
+
+.rbc-toolbar button {
+    background-color: var(--background) !important;
+    border: 1px solid var(--border) !important;
+    border-radius: var(--radius-sm) !important;
+    padding: 0.5rem 1rem !important;
+    margin: 0 0.25rem !important;
+    color: var(--foreground) !important;
+    font-size: 0.875rem !important;
+    font-weight: 500 !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease-in-out !important;
+}
+
+.rbc-toolbar button:hover {
+    background-color: var(--muted) !important;
+    border-color: var(--border) !important;
+}
+
+.rbc-toolbar button:active,
+.rbc-toolbar button.rbc-active {
+    background-color: var(--primary) !important;
+    border-color: var(--border) !important;
+    color: var(--primary-foreground) !important;
+}
+
+.rbc-toolbar .rbc-toolbar-label {
+    font-size: 1.125rem !important;
+    font-weight: 600 !important;
+    color: var(--foreground) !important;
+    margin: 0 1rem !important;
+}
+
+.rbc-month-view {
+    height: calc(100% - 60px) !important;
+    border-radius: var(--radius-md) !important;
+    border: 1px solid var(--border) !important;
+    overflow: hidden !important;
+}
+
+.rbc-header {
+    background-color: var(--muted) !important;
+    border-bottom: 1px solid var(--border) !important;
+    padding: 0.75rem 0.5rem !important;
+    font-weight: 600 !important;
+    color: var(--foreground) !important;
+}
+
+.rbc-date-cell {
+    padding: 0.5rem !important;
+}
+
+.rbc-today {
+    background-color: var(--border) !important;
+}
+
+.rbc-off-range-bg {
+    background-color: var(--double-muted) !important;
+}
+
+.rbc-event {
+    border-radius: var(--radius-sm) !important;
+    padding: 0.25rem 0.5rem !important;
+    font-size: 0.75rem !important;
+    font-weight: 500 !important;
+    margin: 0.125rem 0 !important;
+    cursor: pointer !important;
+}
+
+.rbc-event:focus {
+    outline: 2px solid var(--ring) !important;
+    outline-offset: 2px !important;
+}
+
+.rbc-day-slot .rbc-event {
+    border: none !important;
+}
+
+.rbc-month-row {
+    border-top: 1px solid var(--border) !important;
+}
+
+.rbc-day-bg {
+    /* background-color: var(--background) !important; */
+    border: 1px solid var(--border) !important;
+}
+
+.rbc-header {
+    border: 1px solid var(--border) !important;
+}
+
+.rbc-selected {
+    box-shadow: 0 0 0 2px var(--ring) !important;
+}
+
+/* Ensure calendar controls are clickable */
+.rbc-toolbar button,
+.rbc-toolbar .rbc-btn-group button {
+    pointer-events: auto !important;
+    z-index: 10 !important;
+}
+
+/* Fix for drag and drop */
+.rbc-addons-dnd .rbc-event {
+    cursor: move !important;
+}
+
+.rbc-addons-dnd-drag-preview {
+    opacity: 0.5 !important;
+}
+
+.rbc-addons-dnd-over {
+    background-color: var(--accent) !important;
+}
