@@ -22,10 +22,6 @@ routerAdd("POST", "/physical-model/", (e) => {
         symptomsInput
     );
 
-    if (cmd.exitCode() !== 0) {
-        return e.json(500, { "error": "Failed to process physical model" });
-    }
-
     // Parse the output from the Python script
     const output = cmd.output();
     return e.json(200, { "message": "Physical model processed", "result": output });
