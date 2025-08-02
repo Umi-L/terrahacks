@@ -12,14 +12,11 @@ routerAdd("POST", "/physical-model/", (e) => {
         return e.json(400, { "error": "Invalid symptoms data" });
     }
 
-    // Prepare the symptoms as a space-separated string
-    const symptomsInput = symptoms.join(' ');
-
     // Run the Python script with the symptoms as input
     const cmd = $os.cmd(
         '/home/julian/terrahacks/medical-mole-ml-model/bin/python',
         '/home/julian/terrahacks/medical-mole-ml-model/predictor.py',
-        symptomsInput
+        ...symptoms
     );
 
     // Parse the output from the Python script
