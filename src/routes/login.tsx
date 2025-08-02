@@ -7,12 +7,14 @@ import { Label } from "@/components/ui/label"
 import { usePocketBaseStore } from '@/stores/pocketbase-store'
 import { authUtils, pb } from '@/lib/auth-utils'
 import Navbar from '@/components/Navbar'
+import { useTranslation } from 'react-i18next'
 
 export const Route = createFileRoute('/login')({
     component: Login,
 })
 
 function Login() {
+    const { t } = useTranslation()
     const [formData, setFormData] = useState({
         email: '',
         password: ''
@@ -35,13 +37,13 @@ function Login() {
         }
 
         if (!formData.email) {
-            newErrors.email = 'Email is required'
+            newErrors.email = t('auth.email') + ' is required'
         } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-            newErrors.email = 'Email is invalid'
+            newErrors.email = t('auth.email') + ' is invalid'
         }
 
         if (!formData.password) {
-            newErrors.password = 'Password is required'
+            newErrors.password = t('auth.password') + ' is required'
         }
 
         setErrors(newErrors)
@@ -98,15 +100,15 @@ function Login() {
             <div className="flex items-center justify-center px-4 py-12">
                 <Card className="w-full max-w-md">
                     <CardHeader className="space-y-1">
-                        <CardTitle className="text-2xl text-center">Sign in</CardTitle>
+                        <CardTitle className="text-2xl text-center">{t('auth.login')}</CardTitle>
                         <p className="text-center text-sm text-muted-foreground">
-                            Enter your email and password to sign in
+                            {t('auth.email')} and {t('auth.password')} to sign in
                         </p>
                     </CardHeader>
                     <CardContent>
                         <form onSubmit={handleSubmit} className="space-y-4">
                             <div className="space-y-2">
-                                <Label htmlFor="email">Email</Label>
+                                <Label htmlFor="email">{t('auth.email')}</Label>
                                 <Input
                                     id="email"
                                     type="email"
@@ -122,11 +124,11 @@ function Login() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="password">Password</Label>
+                                <Label htmlFor="password">{t('auth.password')}</Label>
                                 <Input
                                     id="password"
                                     type="password"
-                                    placeholder="Enter your password"
+                                    placeholder={t('auth.password')}
                                     value={formData.password}
                                     onChange={handleInputChange('password')}
                                     disabled={isLoading}
@@ -148,14 +150,14 @@ function Login() {
                                 className="w-full"
                                 disabled={isLoading}
                             >
-                                {isLoading ? 'Signing in...' : 'Sign in'}
+                                {isLoading ? 'Signing in...' : t('auth.loginButton')}
                             </Button>
                         </form>
 
                         <div className="mt-4 text-center text-sm">
-                            Don't have an account?{' '}
+                            {t('auth.dontHaveAccount')}{' '}
                             <Link to="/signup" className="underline hover:text-primary">
-                                Sign up
+                                {t('auth.signup')}
                             </Link>
                         </div>
                     </CardContent>

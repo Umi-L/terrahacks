@@ -25,9 +25,10 @@ export const useHealthModels = () => {
 
             console.log('Physical model response:', response)
 
+            const decodedData = atob(response.result);
             return {
                 success: true,
-                data: response
+                data: decodedData
             }
         } catch (err: any) {
             const errorMessage = err?.message || 'Failed to call physical model'
@@ -55,14 +56,14 @@ export const useHealthModels = () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ symptoms })
+                body: JSON.stringify({ symptoms: symptoms })
             })
 
             console.log('Mental model response:', response)
-
+            const decodedData = atob(response.result);
             return {
                 success: true,
-                data: response
+                data: decodedData
             }
         } catch (err: any) {
             const errorMessage = err?.message || 'Failed to call mental model'
@@ -78,51 +79,9 @@ export const useHealthModels = () => {
         }
     }
 
-    const callBothModels = async (symptoms: string[]) => {
-        try {
-            setIsLoading(true)
-            setError(null)
-
-            console.log('Calling both models with symptoms:', symptoms)
-
-            const [physicalResult, mentalResult] = await Promise.allSettled([
-                callPhysicalModel(symptoms),
-                callMentalModel(symptoms)
-            ])
-
-            const results = {
-                physical: physicalResult.status === 'fulfilled' ? physicalResult.value : { success: false, error: 'Physical model failed' },
-                mental: mentalResult.status === 'fulfilled' ? mentalResult.value : { success: false, error: 'Mental model failed' }
-            }
-
-            console.log('Both models results:', results)
-
-            return results
-        } catch (err: any) {
-            const errorMessage = err?.message || 'Failed to call health models'
-            console.error('Health models error:', err)
-            setError(errorMessage)
-
-            return {
-                physical: { success: false, error: errorMessage },
-                mental: { success: false, error: errorMessage }
-            }
-        } finally {
-            setIsLoading(false)
-        }
-    }
-
-    const prepareSymptomData = (events: any[]): string[] => {
-        return events
-            .filter(event => event.type === 'symptom' || event.type === 'pain')
-            .map(event => event.title)
-    }
-
     return {
         callPhysicalModel,
         callMentalModel,
-        callBothModels,
-        prepareSymptomData,
         isLoading,
         error
     }

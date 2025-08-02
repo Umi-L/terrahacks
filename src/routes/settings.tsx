@@ -9,12 +9,14 @@ import { authUtils, pb } from '@/lib/auth-utils'
 import Navbar from '@/components/Navbar'
 import { motion } from 'framer-motion'
 import { Download, Trash2, AlertTriangle, User, Hospital } from 'lucide-react'
+import { useTranslation } from 'react-i18next'
 
 export const Route = createFileRoute('/settings')({
     component: Settings,
 })
 
 function Settings() {
+    const { t } = useTranslation()
     const pocketBaseStore = usePocketBaseStore()
     const { user, isAuthenticated } = pocketBaseStore
     const navigate = useNavigate()

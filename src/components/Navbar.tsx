@@ -7,26 +7,40 @@ import {
 } from "@/components/ui/navigation-menu"
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/components/ui/sheet'
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { Menu, Settings, LogOut } from 'lucide-react'
+import { Menu, Settings, LogOut, Languages } from 'lucide-react'
 import { usePocketBaseStore } from '@/stores/pocketbase-store'
 import { authUtils } from '@/lib/auth-utils'
 import { useNavigate } from '@tanstack/react-router'
+import { useTranslation } from 'react-i18next'
 
 
 export default function Navbar() {
     const pocketBaseStore = usePocketBaseStore();
     const navigate = useNavigate();
     const { isAuthenticated, user } = pocketBaseStore;
+    const { t, i18n } = useTranslation();
 
     const handleLogout = () => {
         authUtils.logout();
         pocketBaseStore.clearAuth();
     };
 
+    // Language picker functionality
+    const changeLanguage = (lng: string) => {
+        i18n.changeLanguage(lng);
+        localStorage.setItem('language', lng);
+    };
+
+    const currentLanguage = i18n.language || 'en';
+    const languages = [
+        { code: 'en', name: 'English', flag: '🇺🇸' },
+        { code: 'ta', name: 'தமிழ்', flag: '🇮🇳' }
+    ];
+
     // Desktop menu items
     const menu = [
-        { title: "Dashboard", url: "/home" },
-        { title: "About", url: "/about" },
+        { title: t('nav.dashboard'), url: "/home" },
+        { title: t('nav.about'), url: "/about" },
     ];
 
     // Get user initials for profile picture
@@ -69,6 +83,38 @@ export default function Navbar() {
                         </div>
                     </div>
                     <div className="flex gap-2 items-center">
+                        {/* Language Picker */}
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button variant="outline" size="sm" className="flex items-center gap-2">
+                                    <Languages className="w-4 h-4" />
+                                    <span className="hidden sm:inline">
+                                        {languages.find(lang => lang.code === currentLanguage)?.flag}
+                                    </span>
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-48 p-2" align="end">
+                                <div className="flex flex-col space-y-1">
+                                    <div className="px-2 py-1.5 text-sm font-medium text-muted-foreground">
+                                        {t('settings.language')}
+                                    </div>
+                                    <div className="h-px bg-border my-1"></div>
+                                    {languages.map((language) => (
+                                        <Button
+                                            key={language.code}
+                                            variant={currentLanguage === language.code ? "default" : "ghost"}
+                                            size="sm"
+                                            className="justify-start"
+                                            onClick={() => changeLanguage(language.code)}
+                                        >
+                                            <span className="mr-2">{language.flag}</span>
+                                            {language.name}
+                                        </Button>
+                                    ))}
+                                </div>
+                            </PopoverContent>
+                        </Popover>
+
                         {isAuthenticated ? (
                             <>
                                 {/* <span className="text-sm text-muted-foreground mr-2">
@@ -95,7 +141,7 @@ export default function Navbar() {
                                                 onClick={() => navigate({ to: '/settings' })}
                                             >
                                                 <Settings className="w-4 h-4 mr-2" />
-                                                Settings
+                                                {t('nav.settings')}
                                             </Button>
                                             <Button
                                                 variant="ghost"
@@ -104,7 +150,7 @@ export default function Navbar() {
                                                 onClick={handleLogout}
                                             >
                                                 <LogOut className="w-4 h-4 mr-2" />
-                                                Logout
+                                                {t('nav.logout')}
                                             </Button>
                                         </div>
                                     </PopoverContent>
@@ -113,10 +159,10 @@ export default function Navbar() {
                         ) : (
                             <>
                                 <Button variant="outline" size="sm" onClick={() => navigate({ to: '/login' })}>
-                                    Login
+                                    {t('auth.login')}
                                 </Button>
                                 <Button size="sm" onClick={() => navigate({ to: '/signup' })}>
-                                    Sign Up
+                                    {t('auth.signup')}
                                 </Button>
                             </>
                         )}
@@ -158,6 +204,27 @@ export default function Navbar() {
                                         ))}
                                     </div>
                                     <div className="flex flex-col gap-3 mt-6">
+                                        {/* Language Picker for Mobile */}
+                                        <div className="mb-4">
+                                            <div className="text-sm font-medium text-muted-foreground mb-2">
+                                                {t('settings.language')}
+                                            </div>
+                                            <div className="flex flex-col gap-2">
+                                                {languages.map((language) => (
+                                                    <Button
+                                                        key={language.code}
+                                                        variant={currentLanguage === language.code ? "default" : "outline"}
+                                                        size="sm"
+                                                        className="justify-start"
+                                                        onClick={() => changeLanguage(language.code)}
+                                                    >
+                                                        <span className="mr-2">{language.flag}</span>
+                                                        {language.name}
+                                                    </Button>
+                                                ))}
+                                            </div>
+                                        </div>
+
                                         {isAuthenticated ? (
                                             <>
                                                 <div className="flex items-center gap-3 mb-2">
@@ -170,17 +237,17 @@ export default function Navbar() {
                                                 </div>
                                                 <Button variant="outline" onClick={() => navigate({ to: '/settings' })}>
                                                     <Settings className="w-4 h-4 mr-2" />
-                                                    Settings
+                                                    {t('nav.settings')}
                                                 </Button>
                                                 <Button variant="outline" onClick={handleLogout}>
                                                     <LogOut className="w-4 h-4 mr-2" />
-                                                    Logout
+                                                    {t('nav.logout')}
                                                 </Button>
                                             </>
                                         ) : (
                                             <>
-                                                <Button variant="outline" onClick={() => navigate({ to: '/login' })}>Login</Button>
-                                                <Button onClick={() => navigate({ to: '/signup' })}>Sign Up</Button>
+                                                <Button variant="outline" onClick={() => navigate({ to: '/login' })}>{t('auth.login')}</Button>
+                                                <Button onClick={() => navigate({ to: '/signup' })}>{t('auth.signup')}</Button>
                                             </>
                                         )}
                                     </div>

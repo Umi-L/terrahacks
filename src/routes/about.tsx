@@ -1,12 +1,15 @@
 import { createFileRoute } from '@tanstack/react-router'
 import Navbar from '@/components/Navbar'
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { useTranslation } from 'react-i18next'
 
 export const Route = createFileRoute('/about')({
     component: About,
 })
 
 function About() {
+    const { t } = useTranslation()
+
     return (
         <div className="min-h-screen bg-background">
             <Navbar />
@@ -15,23 +18,20 @@ function About() {
                 <div className="max-w-4xl mx-auto space-y-8">
                     <div className="text-center">
                         <h1 className="text-4xl font-bold text-foreground mb-4">
-                            About Our Platform
+                            {t('about.title')}
                         </h1>
                         <p className="text-xl text-muted-foreground">
-                            Empowering sustainable decisions through comprehensive environmental data
+                            {t('about.subtitle')}
                         </p>
                     </div>
 
                     <Card>
                         <CardHeader>
-                            <CardTitle>Our Mission</CardTitle>
+                            <CardTitle>{t('about.ourMission')}</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <p className="text-muted-foreground leading-relaxed">
-                                We are dedicated to providing accurate, real-time environmental data
-                                and insights to help individuals, businesses, and communities make
-                                informed decisions for a sustainable future. Our platform aggregates
-                                data from multiple sources to present comprehensive ECO health reports.
+                                {t('about.missionText')}
                             </p>
                         </CardContent>
                     </Card>
@@ -39,29 +39,27 @@ function About() {
                     <div className="grid md:grid-cols-2 gap-6">
                         <Card>
                             <CardHeader>
-                                <CardTitle>What We Track</CardTitle>
+                                <CardTitle>{t('about.whatWeTrack')}</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <ul className="space-y-2 text-muted-foreground">
-                                    <li>• Carbon footprint and emissions</li>
-                                    <li>• Water usage and quality</li>
-                                    <li>• Renewable energy adoption</li>
-                                    <li>• Waste management and recycling</li>
-                                    <li>• Air quality indices</li>
-                                    <li>• Biodiversity measurements</li>
+                                    <li>• {t('about.trackingItems.carbon')}</li>
+                                    <li>• {t('about.trackingItems.water')}</li>
+                                    <li>• {t('about.trackingItems.energy')}</li>
+                                    <li>• {t('about.trackingItems.waste')}</li>
+                                    <li>• {t('about.trackingItems.air')}</li>
+                                    <li>• {t('about.trackingItems.biodiversity')}</li>
                                 </ul>
                             </CardContent>
                         </Card>
 
                         <Card>
                             <CardHeader>
-                                <CardTitle>Technology</CardTitle>
+                                <CardTitle>{t('about.technology')}</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 <p className="text-muted-foreground leading-relaxed">
-                                    Built with modern web technologies including React, TypeScript,
-                                    and real-time data processing to ensure you have access to the
-                                    most current environmental information available.
+                                    {t('about.technologyText')}
                                 </p>
                             </CardContent>
                         </Card>

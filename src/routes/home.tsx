@@ -14,6 +14,7 @@ import { useGeminiChat } from '@/hooks/useGeminiChat'
 import { useHealthModels } from '@/hooks/useHealthModels'
 import ReactMarkdown from 'react-markdown'
 import remarkBreaks from 'remark-breaks'
+import { useTranslation } from 'react-i18next'
 import {
     fetchUserCalendarEvents,
     createCalendarEvent,
@@ -97,22 +98,25 @@ interface SymptomEvent {
     }
 }
 
-const eventTypeColors = {
-    'pain': { bg: '#ef4444', border: '#dc2626', label: 'Pain' },
-    'symptom': { bg: '#8b5cf6', border: '#7c3aed', label: 'Symptom' },
-    'event': { bg: '#06b6d4', border: '#0891b2', label: 'Event' },
-    'medical-appointment': { bg: '#ec4899', border: '#db2777', label: 'Medical Appointment' },
-    'medication-reminder': { bg: '#84cc16', border: '#65a30d', label: 'Medication Reminder' }
-}
-
-const painLevelColors = {
-    'mild': { bg: '#10b981', border: '#059669', label: 'Mild' },
-    'moderate': { bg: '#f59e0b', border: '#d97706', label: 'Moderate' },
-    'severe': { bg: '#ef4444', border: '#dc2626', label: 'Severe' }
-}
-
 function Home() {
+    const { t } = useTranslation()
     const { user, isAuthenticated } = usePocketBaseStore()
+
+    // Define event type colors with translated labels
+    const eventTypeColors = useMemo(() => ({
+        'pain': { bg: '#ef4444', border: '#dc2626', label: t('eventTypes.pain') },
+        'symptom': { bg: '#8b5cf6', border: '#7c3aed', label: t('eventTypes.symptom') },
+        'event': { bg: '#06b6d4', border: '#0891b2', label: t('eventTypes.event') },
+        'medical-appointment': { bg: '#ec4899', border: '#db2777', label: t('eventTypes.medical-appointment') },
+        'medication-reminder': { bg: '#517d0c', border: '#446e09ff', label: t('eventTypes.medication-reminder') }
+    }), [t])
+
+    const painLevelColors = useMemo(() => ({
+        'mild': { bg: '#10b981', border: '#059669', label: t('pain.mild') },
+        'moderate': { bg: '#f59e0b', border: '#d97706', label: t('pain.moderate') },
+        'severe': { bg: '#ef4444', border: '#dc2626', label: t('pain.severe') }
+    }), [t])
+
     const [myEvents, setMyEvents] = useState<CalendarEvent[]>([])
     const [showQuickAdd, setShowQuickAdd] = useState(false)
     const [showSQLLogs, setShowSQLLogs] = useState(false)
@@ -128,7 +132,7 @@ function Home() {
     const messagesEndRef = useRef<HTMLDivElement>(null)
 
     // Health models functionality
-    const { callPhysicalModel, callMentalModel, callBothModels } = useHealthModels()
+    const { callPhysicalModel, callMentalModel } = useHealthModels()
 
     // Abnormal symptom analysis state
     const [abnormalDateRanges, setAbnormalDateRanges] = useState<Array<{ start: Date, end: Date }>>([])
@@ -257,7 +261,7 @@ function Home() {
             } catch (err: any) {
                 console.error('Failed to load calendar events:', err)
                 if (isMounted && err.status !== 0) { // Don't show error for cancelled requests
-                    setError('Failed to load calendar events')
+                    setError(t('home.errorLoading'))
                 }
             } finally {
                 if (isMounted) {
@@ -358,7 +362,7 @@ function Home() {
                 setAbnormalDateRanges([])
             } catch (err) {
                 console.error('Failed to move event:', err)
-                setError('Failed to update event')
+                setError(t('home.errorUpdating'))
 
                 // Revert optimistic update on error by refetching
                 try {
@@ -398,7 +402,7 @@ function Home() {
                 setAbnormalDateRanges([])
             } catch (err) {
                 console.error('Failed to resize event:', err)
-                setError('Failed to update event')
+                setError(t('home.errorUpdating'))
             }
         },
         [myEvents]
@@ -437,7 +441,7 @@ function Home() {
     }
 
     const handleContextMenuDelete = async () => {
-        if (contextMenu.event && confirm('Are you sure you want to delete this event?')) {
+        if (contextMenu.event && confirm(t('home.confirmDeleteEvent'))) {
             await deleteEvent(contextMenu.event.id)
         }
         handleCloseContextMenu()
@@ -719,7 +723,7 @@ function Home() {
             setAbnormalDateRanges([])
         } catch (err) {
             console.error('Failed to update event:', err)
-            setError('Failed to update event')
+            setError(t('home.errorUpdating'))
         } finally {
             setIsSubmitting(false)
         }
@@ -926,7 +930,7 @@ IMPORTANT:
         const isMedication = event.type === 'medication-reminder'
         const wasTaken = event.eventData?.taken || false
         const isPast = new Date(event.end) < new Date()
-        
+
         return (
             <div
                 onContextMenu={(e) => handleEventRightClick(event, e)}
@@ -1060,16 +1064,16 @@ IMPORTANT:
         const events: any[] = []
         const startDate = new Date(formData.date)
         const endDate = formData.recurringEndDate ? new Date(formData.recurringEndDate) : new Date(startDate.getTime() + (90 * 24 * 60 * 60 * 1000)) // Default 90 days
-        
+
         // Handle multiple times per day
         const times = formData.recurringTimes.filter(time => time.trim() !== '')
         if (times.length === 0) times.push(formData.time) // Fallback to main time
-        
+
         let currentDate = new Date(startDate)
-        
+
         while (currentDate <= endDate) {
             let shouldCreateEvent = false
-            
+
             if (formData.recurringPattern === 'daily') {
                 shouldCreateEvent = true
             } else if (formData.recurringPattern === 'weekly') {
@@ -1080,17 +1084,17 @@ IMPORTANT:
                 const daysDiff = Math.floor((currentDate.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000))
                 shouldCreateEvent = daysDiff % formData.recurringInterval === 0
             }
-            
+
             if (shouldCreateEvent) {
                 // Create events for each time of day
                 times.forEach(timeStr => {
                     const [hours, minutes] = timeStr.split(':').map(Number)
                     const eventStart = new Date(currentDate)
                     eventStart.setHours(hours, minutes, 0, 0)
-                    
+
                     const eventEnd = new Date(eventStart)
                     eventEnd.setMinutes(eventEnd.getMinutes() + 30) // 30 minute duration
-                    
+
                     events.push({
                         title: formData.title,
                         start: eventStart,
@@ -1108,17 +1112,17 @@ IMPORTANT:
                     })
                 })
             }
-            
+
             // Move to next day
             currentDate.setDate(currentDate.getDate() + 1)
         }
-        
+
         return events
     }
 
     // Get medication adherence summary
     const getMedicationAdherence = () => {
-        const medicationGroups: Record<string, { 
+        const medicationGroups: Record<string, {
             name: string,
             total: number,
             taken: number,
@@ -1136,7 +1140,7 @@ IMPORTANT:
             .forEach(event => {
                 const medicationName = event.eventData?.medication || event.title
                 const recurringId = event.eventData?.recurringId || medicationName
-                
+
                 if (!medicationGroups[recurringId]) {
                     medicationGroups[recurringId] = {
                         name: medicationName,
@@ -1171,7 +1175,7 @@ IMPORTANT:
     // Add new event with proper date handling
     const addQuickEvent = async () => {
         if (!isAuthenticated) {
-            setError('Please log in to add events')
+            setError(t('home.notAuthenticated'))
             return
         }
 
@@ -1191,12 +1195,12 @@ IMPORTANT:
             if (quickAddForm.type === 'medication-reminder' && quickAddForm.isRecurring) {
                 // Generate all recurring events
                 const recurringEvents = generateRecurringMedicationEvents(quickAddForm)
-                
+
                 // Create all recurring events
                 for (const eventInfo of recurringEvents) {
                     try {
                         const newEvent = await createCalendarEvent(eventInfo)
-                        
+
                         // Log for SQL compatibility
                         logEventForSQL('INSERT', {
                             id: parseInt(newEvent.id, 10) || Date.now(),
@@ -1212,7 +1216,7 @@ IMPORTANT:
                         // Continue with next event even if one fails
                     }
                 }
-                
+
                 // Reset form and close modal
                 setQuickAddForm({
                     title: '',
@@ -1239,11 +1243,11 @@ IMPORTANT:
                     notes: ''
                 })
                 setShowQuickAdd(false)
-                
+
                 // Reset analysis state
                 setHasAnalyzed(false)
                 setAbnormalDateRanges([])
-                
+
                 return // Exit early for recurring medications
             }
 
@@ -1333,7 +1337,7 @@ IMPORTANT:
             setAbnormalDateRanges([])
         } catch (err) {
             console.error('Failed to create event:', err)
-            setError('Failed to create event')
+            setError(t('home.errorCreating'))
         } finally {
             setIsSubmitting(false)
         }
@@ -1402,7 +1406,7 @@ IMPORTANT:
                             <div className="h-full flex items-center justify-center">
                                 <div className="flex flex-col items-center gap-4">
                                     <div className="animate-spin h-8 w-8 border-2 border-primary border-t-transparent rounded-full"></div>
-                                    <p className="text-muted-foreground">Loading calendar events...</p>
+                                    <p className="text-muted-foreground">{t('home.loadingEvents')}</p>
                                 </div>
                             </div>
                         ) : !isAuthenticated ? (
@@ -1501,7 +1505,7 @@ IMPORTANT:
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.3, delay: 0.1 }}
                             >
-                                <h3 className="text-lg font-semibold">Quick Add Event</h3>
+                                <h3 className="text-lg font-semibold">{t('home.quickAdd')}</h3>
                                 <motion.button
                                     onClick={() => setShowQuickAdd(false)}
                                     className="text-muted-foreground hover:text-foreground transition-colors"
@@ -1526,12 +1530,12 @@ IMPORTANT:
                                             type="text"
                                             value={quickAddForm.title}
                                             onChange={(e) => setQuickAddForm(prev => ({ ...prev, title: e.target.value }))}
-                                            placeholder="Event title"
+                                            placeholder={t('home.eventTitle')}
                                             className="w-full px-3 py-2 text-sm bg-background border border-border rounded focus:outline-none focus:ring-2 focus:ring-ring"
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-sm font-medium text-foreground block mb-2">Type</label>
+                                        <label className="text-sm font-medium text-foreground block mb-2">{t('home.type')}</label>
                                         <select
                                             value={quickAddForm.type}
                                             onChange={(e) => setQuickAddForm(prev => ({ ...prev, type: e.target.value as EventType }))}
@@ -1567,13 +1571,13 @@ IMPORTANT:
                                                     type="text"
                                                     value={quickAddForm.location}
                                                     onChange={(e) => setQuickAddForm(prev => ({ ...prev, location: e.target.value }))}
-                                                    placeholder="e.g., head, back, knee"
+                                                    placeholder={t('home.locationPlaceholder')}
                                                     className="w-full px-3 py-2 text-sm bg-background border border-border rounded focus:outline-none focus:ring-2 focus:ring-ring"
                                                 />
                                             </div>
                                         </div>
                                         <div className="mt-3">
-                                            <label className="text-sm font-medium block mb-2">Severity (1-10): {quickAddForm.severity}</label>
+                                            <label className="text-sm font-medium block mb-2">{t('home.severity')} (1-10): {quickAddForm.severity}</label>
                                             <input
                                                 type="range"
                                                 min="1"
@@ -1622,7 +1626,7 @@ IMPORTANT:
                                                 className="w-full px-3 py-2 text-sm bg-background border border-border rounded focus:outline-none focus:ring-2 focus:ring-ring"
                                             />
                                         </div>
-                                        
+
                                         {/* Recurring medication options */}
                                         <div className="mt-4 border-t border-green-200 dark:border-green-700 pt-4">
                                             <div className="flex items-center gap-2 mb-3">
@@ -1635,7 +1639,7 @@ IMPORTANT:
                                                 />
                                                 <label htmlFor="isRecurring" className="text-sm font-medium">Set up recurring reminders</label>
                                             </div>
-                                            
+
                                             {quickAddForm.isRecurring && (
                                                 <div className="space-y-4 bg-green-100 dark:bg-green-800/30 p-3 rounded">
                                                     <div>
@@ -1650,7 +1654,7 @@ IMPORTANT:
                                                             <option value="custom">Every N days</option>
                                                         </select>
                                                     </div>
-                                                    
+
                                                     {quickAddForm.recurringPattern === 'weekly' && (
                                                         <div>
                                                             <label className="text-sm font-medium block mb-2">Days of the week</label>
@@ -1675,7 +1679,7 @@ IMPORTANT:
                                                             </div>
                                                         </div>
                                                     )}
-                                                    
+
                                                     {quickAddForm.recurringPattern === 'custom' && (
                                                         <div>
                                                             <label className="text-sm font-medium block mb-2">Every N days</label>
@@ -1689,7 +1693,7 @@ IMPORTANT:
                                                             />
                                                         </div>
                                                     )}
-                                                    
+
                                                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                                         <div>
                                                             <label className="text-sm font-medium block mb-2">End Date</label>
@@ -1701,7 +1705,7 @@ IMPORTANT:
                                                             />
                                                         </div>
                                                     </div>
-                                                    
+
                                                     <div>
                                                         <label className="text-sm font-medium block mb-2">Times per day</label>
                                                         {quickAddForm.recurringTimes.map((time, index) => (
@@ -1776,7 +1780,7 @@ IMPORTANT:
                                 {/* Date and time fields */}
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                     <div>
-                                        <label className="text-sm font-medium text-foreground block mb-2">Start Date</label>
+                                        <label className="text-sm font-medium text-foreground block mb-2">{t('home.startDate')}</label>
                                         <input
                                             type="date"
                                             value={quickAddForm.date}
@@ -1785,7 +1789,7 @@ IMPORTANT:
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-sm font-medium text-foreground block mb-2">Start Time</label>
+                                        <label className="text-sm font-medium text-foreground block mb-2">{t('home.startTime')}</label>
                                         <input
                                             type="time"
                                             value={quickAddForm.time}
@@ -1794,7 +1798,7 @@ IMPORTANT:
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-sm font-medium text-foreground block mb-2">End Date (Optional)</label>
+                                        <label className="text-sm font-medium text-foreground block mb-2">{t('home.endDate')}</label>
                                         <input
                                             type="date"
                                             value={quickAddForm.endDate}
@@ -1803,7 +1807,7 @@ IMPORTANT:
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-sm font-medium text-foreground block mb-2">End Time (Optional)</label>
+                                        <label className="text-sm font-medium text-foreground block mb-2">{t('home.endTime')}</label>
                                         <input
                                             type="time"
                                             value={quickAddForm.endTime}
@@ -1815,11 +1819,11 @@ IMPORTANT:
                                 </div>
 
                                 <div>
-                                    <label className="text-sm font-medium text-foreground block mb-2">Description (Optional)</label>
+                                    <label className="text-sm font-medium text-foreground block mb-2">{t('home.description')}</label>
                                     <textarea
                                         value={quickAddForm.description}
                                         onChange={(e) => setQuickAddForm(prev => ({ ...prev, description: e.target.value }))}
-                                        placeholder="Additional details..."
+                                        placeholder={t('home.additionalDetails')}
                                         rows={3}
                                         className="w-full px-3 py-2 text-sm bg-background border border-border rounded focus:outline-none focus:ring-2 focus:ring-ring resize-none"
                                     />
@@ -1827,11 +1831,11 @@ IMPORTANT:
 
                                 {/* General notes field */}
                                 <div>
-                                    <label className="text-sm font-medium text-foreground block mb-2">Notes (Optional)</label>
+                                    <label className="text-sm font-medium text-foreground block mb-2">{t('home.notes')}</label>
                                     <textarea
                                         value={quickAddForm.notes}
                                         onChange={(e) => setQuickAddForm(prev => ({ ...prev, notes: e.target.value }))}
-                                        placeholder="Additional notes or observations..."
+                                        placeholder={t('home.additionalNotes')}
                                         rows={2}
                                         className="w-full px-3 py-2 text-sm bg-background border border-border rounded focus:outline-none focus:ring-2 focus:ring-ring resize-none"
                                     />
@@ -1842,7 +1846,7 @@ IMPORTANT:
                                         onClick={() => setShowQuickAdd(false)}
                                         className="flex-1 px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 transition-colors"
                                     >
-                                        Cancel
+                                        {t('home.cancel')}
                                     </button>
                                     <button
                                         onClick={addQuickEvent}
@@ -1852,7 +1856,7 @@ IMPORTANT:
                                         {isSubmitting && (
                                             <div className="animate-spin h-4 w-4 border-2 border-primary-foreground border-t-transparent rounded-full"></div>
                                         )}
-                                        {isSubmitting ? 'Adding...' : 'Add Event'}
+                                        {isSubmitting ? t('home.adding') : t('home.addEvent')}
                                     </button>
                                 </div>
                             </motion.div>
@@ -1883,7 +1887,7 @@ IMPORTANT:
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ duration: 0.3, delay: 0.1 }}
                             >
-                                <h3 className="text-lg font-semibold">Edit Event</h3>
+                                <h3 className="text-lg font-semibold">{t('home.editEvent')}</h3>
                                 <div className="flex gap-2">
                                     <motion.button
                                         onClick={async () => {
@@ -1923,17 +1927,17 @@ IMPORTANT:
                             >
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
-                                        <label className="text-sm font-medium text-foreground block mb-2">Title</label>
+                                        <label className="text-sm font-medium text-foreground block mb-2">{t('home.title')}</label>
                                         <input
                                             type="text"
                                             value={editForm.title}
                                             onChange={(e) => setEditForm(prev => ({ ...prev, title: e.target.value }))}
-                                            placeholder="Event title"
+                                            placeholder={t('home.eventTitle')}
                                             className="w-full px-3 py-2 text-sm bg-background border border-border rounded focus:outline-none focus:ring-2 focus:ring-ring"
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-sm font-medium text-foreground block mb-2">Type</label>
+                                        <label className="text-sm font-medium text-foreground block mb-2">{t('home.type')}</label>
                                         <select
                                             value={editForm.type}
                                             onChange={(e) => setEditForm(prev => ({ ...prev, type: e.target.value as EventType }))}
@@ -2059,7 +2063,7 @@ IMPORTANT:
                                 {/* Date and time fields */}
                                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                     <div>
-                                        <label className="text-sm font-medium text-foreground block mb-2">Start Date</label>
+                                        <label className="text-sm font-medium text-foreground block mb-2">{t('home.startDate')}</label>
                                         <input
                                             type="date"
                                             value={editForm.date}
@@ -2068,7 +2072,7 @@ IMPORTANT:
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-sm font-medium text-foreground block mb-2">Start Time</label>
+                                        <label className="text-sm font-medium text-foreground block mb-2">{t('home.startTime')}</label>
                                         <input
                                             type="time"
                                             value={editForm.time}
@@ -2077,7 +2081,7 @@ IMPORTANT:
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-sm font-medium text-foreground block mb-2">End Date</label>
+                                        <label className="text-sm font-medium text-foreground block mb-2">{t('home.endDate')}</label>
                                         <input
                                             type="date"
                                             value={editForm.endDate}
@@ -2086,7 +2090,7 @@ IMPORTANT:
                                         />
                                     </div>
                                     <div>
-                                        <label className="text-sm font-medium text-foreground block mb-2">End Time</label>
+                                        <label className="text-sm font-medium text-foreground block mb-2">{t('home.endTime')}</label>
                                         <input
                                             type="time"
                                             value={editForm.endTime}
@@ -2097,22 +2101,22 @@ IMPORTANT:
                                 </div>
 
                                 <div>
-                                    <label className="text-sm font-medium text-foreground block mb-2">Description</label>
+                                    <label className="text-sm font-medium text-foreground block mb-2">{t('home.description')}</label>
                                     <textarea
                                         value={editForm.description}
                                         onChange={(e) => setEditForm(prev => ({ ...prev, description: e.target.value }))}
-                                        placeholder="Additional details..."
+                                        placeholder={t('home.additionalDetails')}
                                         rows={3}
                                         className="w-full px-3 py-2 text-sm bg-background border border-border rounded focus:outline-none focus:ring-2 focus:ring-ring resize-none"
                                     />
                                 </div>
 
                                 <div>
-                                    <label className="text-sm font-medium text-foreground block mb-2">Notes</label>
+                                    <label className="text-sm font-medium text-foreground block mb-2">{t('home.notes')}</label>
                                     <textarea
                                         value={editForm.notes}
                                         onChange={(e) => setEditForm(prev => ({ ...prev, notes: e.target.value }))}
-                                        placeholder="Additional notes or observations..."
+                                        placeholder={t('home.additionalNotes')}
                                         rows={2}
                                         className="w-full px-3 py-2 text-sm bg-background border border-border rounded focus:outline-none focus:ring-2 focus:ring-ring resize-none"
                                     />
@@ -2126,7 +2130,7 @@ IMPORTANT:
                                         }}
                                         className="flex-1 px-4 py-2 bg-secondary text-secondary-foreground rounded-md hover:bg-secondary/80 transition-colors"
                                     >
-                                        Cancel
+                                        {t('home.cancel')}
                                     </button>
                                     <button
                                         onClick={updateEvent}
@@ -2136,7 +2140,7 @@ IMPORTANT:
                                         {isSubmitting && (
                                             <div className="animate-spin h-4 w-4 border-2 border-primary-foreground border-t-transparent rounded-full"></div>
                                         )}
-                                        {isSubmitting ? 'Saving...' : 'Save Changes'}
+                                        {isSubmitting ? t('home.saving') : t('home.saveChanges')}
                                     </button>
                                 </div>
                             </motion.div>
@@ -2225,7 +2229,7 @@ IMPORTANT:
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                             </svg>
-                            Edit Event
+                            {t('home.contextMenu.edit')}
                         </button>
                         <button
                             onClick={handleContextMenuDelete}
@@ -2234,7 +2238,7 @@ IMPORTANT:
                             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
-                            Delete Event
+                            {t('home.contextMenu.delete')}
                         </button>
                     </div>
                 )}
@@ -2335,13 +2339,6 @@ IMPORTANT:
                                         title="Test Mental Model"
                                     >
                                         Mental
-                                    </button>
-                                    <button
-                                        onClick={() => callBothModels(['fatigue', 'anxiety', 'headache'])}
-                                        className="text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded text-xs border border-border"
-                                        title="Test Both Models"
-                                    >
-                                        Both
                                     </button>
                                     <button
                                         onClick={clearChat}

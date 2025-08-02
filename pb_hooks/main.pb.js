@@ -25,13 +25,25 @@ routerAdd("POST", "/physical-model/", (e) => {
 });
 
 routerAdd("POST", "/mental-model/", (e) => {
-    const data = e.json();
-    const { symptoms, age, gender } = data;
+    const data = e.requestInfo().body;
+    const symptoms = data.symptoms;
+    const age = data.age;
+    const gender = data.gender;
 
-    if (!Array.isArray(symptoms) || typeof age !== 'number' || typeof gender !== 'string') {
-        return e.json(400, { "error": "Invalid data" });
+    if (!Array.isArray(symptoms)) {
+        return e.json(400, { "error": "Invalid symptoms data" });
     }
 
-    // Process the symptoms, age, and gender for the mental model
-    return e.json(200, { "message": "Mental model processed", "symptoms": symptoms, "age": age, "gender": gender });
+    // Run the Python script with the symptoms as input
+    const cmd = $os.cmd(
+        '/home/julian/terrahacks/MentalHealthMLM/src/bin/python',
+        '/home/julian/terrahacks/MentalHealthMLM/src/quick_diagnosis.py',
+        "--age", age.toString(),
+        "--gender", gender,
+        "--symptoms", symptoms.join(",")
+    );
+
+    // Parse the output from the Python script
+    const output = cmd.output();
+    return e.json(200, { "message": "Mental model processed", "result": output });
 });

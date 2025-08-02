@@ -5,12 +5,14 @@ import { Button } from "@/components/ui/button"
 import { motion } from 'framer-motion'
 import Navbar from '../components/Navbar'
 import { usePocketBaseStore } from '@/stores/pocketbase-store'
+import { useTranslation } from 'react-i18next'
 
 export const Route = createFileRoute('/')({
     component: Index,
 })
 
 function Index() {
+    const { t } = useTranslation()
     const navigate = useNavigate()
     const { isAuthenticated } = usePocketBaseStore()
 
@@ -104,7 +106,7 @@ function Index() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8, delay: 0.6 }}
                     >
-                        Medical <motion.span
+                        {t('index.title').split(' ')[0]} <motion.span
                             style={{ color: 'var(--primary)', fontWeight: 'bold' }}
                             initial={{ opacity: 0, scale: 0.8 }}
                             animate={{ opacity: 1, scale: 1 }}
@@ -114,7 +116,7 @@ function Index() {
                                 transition: { duration: 0.2 }
                             }}
                         >
-                            Mole
+                            {t('index.title').split(' ')[1]}
                         </motion.span>
                     </motion.h1>
                     <motion.p
@@ -124,7 +126,7 @@ function Index() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8, delay: 0.9 }}
                     >
-                        Track your symptoms, get instant AI-powered health insights, and take control of your wellbeing. Medical Mole helps you log daily symptoms, visualize trends, and chat with an AI assistant for personalized advice.
+                        {t('index.subtitle')}
                     </motion.p>
                     <motion.div
                         className="flex flex-col sm:flex-row gap-4 mb-16 w-full sm:w-auto justify-center"
@@ -144,7 +146,7 @@ function Index() {
                                 className="text-xl px-10 py-7 w-full sm:w-auto"
                                 onClick={handleGetStarted}
                             >
-                                Get Started
+                                {t('index.getStarted')}
                             </Button>
                         </motion.div>
                         <motion.div
@@ -155,7 +157,7 @@ function Index() {
                             whileTap={{ scale: 0.95 }}
                         >
                             <Button variant="outline" size="lg" className="text-xl px-10 py-7 w-full sm:w-auto flex items-center gap-2">
-                                Learn more
+                                {t('index.learnMore')}
                                 <motion.svg
                                     xmlns="http://www.w3.org/2000/svg"
                                     fill="none"
@@ -187,7 +189,7 @@ function Index() {
                         animate={{ opacity: 1 }}
                         transition={{ duration: 0.5, delay: 1.8 }}
                     >
-                        Built with open-source technologies
+                        {t('index.builtWith')}
                     </motion.span>
                     <motion.div
                         className="flex flex-row gap-4"

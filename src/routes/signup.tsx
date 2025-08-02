@@ -7,12 +7,14 @@ import { Label } from "@/components/ui/label"
 import { usePocketBaseStore } from '@/stores/pocketbase-store'
 import { authUtils, pb } from '@/lib/auth-utils'
 import Navbar from '@/components/Navbar'
+import { useTranslation } from 'react-i18next'
 
 export const Route = createFileRoute('/signup')({
     component: Signup,
 })
 
 function Signup() {
+    const { t } = useTranslation()
     const [formData, setFormData] = useState({
         email: '',
         password: '',
@@ -39,19 +41,19 @@ function Signup() {
         }
 
         if (!formData.email) {
-            newErrors.email = 'Email is required'
+            newErrors.email = t('auth.email') + ' is required'
         } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-            newErrors.email = 'Email is invalid'
+            newErrors.email = t('auth.email') + ' is invalid'
         }
 
         if (!formData.password) {
-            newErrors.password = 'Password is required'
+            newErrors.password = t('auth.password') + ' is required'
         } else if (formData.password.length < 8) {
-            newErrors.password = 'Password must be at least 8 characters long'
+            newErrors.password = t('auth.password') + ' must be at least 8 characters long'
         }
 
         if (!formData.passwordConfirm) {
-            newErrors.passwordConfirm = 'Password confirmation is required'
+            newErrors.passwordConfirm = t('auth.confirmPassword') + ' is required'
         } else if (formData.password !== formData.passwordConfirm) {
             newErrors.passwordConfirm = 'Passwords do not match'
         }
@@ -115,7 +117,7 @@ function Signup() {
             <div className="flex items-center justify-center px-4 py-12">
                 <Card className="w-full max-w-md">
                     <CardHeader className="space-y-1">
-                        <CardTitle className="text-2xl text-center">Create account</CardTitle>
+                        <CardTitle className="text-2xl text-center">{t('auth.signup')}</CardTitle>
                         <p className="text-center text-sm text-muted-foreground">
                             Enter your details to create your account
                         </p>
@@ -135,7 +137,7 @@ function Signup() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="email">Email</Label>
+                                <Label htmlFor="email">{t('auth.email')}</Label>
                                 <Input
                                     id="email"
                                     type="email"
@@ -151,7 +153,7 @@ function Signup() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="password">Password</Label>
+                                <Label htmlFor="password">{t('auth.password')}</Label>
                                 <Input
                                     id="password"
                                     type="password"
@@ -167,11 +169,11 @@ function Signup() {
                             </div>
 
                             <div className="space-y-2">
-                                <Label htmlFor="passwordConfirm">Confirm Password</Label>
+                                <Label htmlFor="passwordConfirm">{t('auth.confirmPassword')}</Label>
                                 <Input
                                     id="passwordConfirm"
                                     type="password"
-                                    placeholder="Confirm your password"
+                                    placeholder={t('auth.confirmPassword')}
                                     value={formData.passwordConfirm}
                                     onChange={handleInputChange('passwordConfirm')}
                                     disabled={isLoading}
@@ -193,14 +195,14 @@ function Signup() {
                                 className="w-full"
                                 disabled={isLoading}
                             >
-                                {isLoading ? 'Creating account...' : 'Create account'}
+                                {isLoading ? 'Creating account...' : t('auth.signupButton')}
                             </Button>
                         </form>
 
                         <div className="mt-4 text-center text-sm">
-                            Already have an account?{' '}
+                            {t('auth.alreadyHaveAccount')}{' '}
                             <Link to="/login" className="underline hover:text-primary">
-                                Sign in
+                                {t('auth.login')}
                             </Link>
                         </div>
                     </CardContent>
