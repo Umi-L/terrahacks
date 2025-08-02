@@ -17,7 +17,7 @@ routerAdd("POST", "/physical-model/", (e) => {
 
     // Run the Python script with the symptoms as input
     const cmd = $os.cmd(
-        '/usr/bin/python3.11',
+        '/home/julian/terrahacks/medical-mole-ml-model/bin/python',
         '/home/julian/terrahacks/medical-mole-ml-model/predictor.py',
         symptomsInput
     );
