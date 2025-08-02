@@ -110,6 +110,7 @@ DO NOT suggest events if:
 
 To suggest an event, include this JSON structure at the end of your response:
 
+For single events:
 EVENT_SUGGESTION:
 {
   "title": "Brief title for the event",
@@ -131,6 +132,29 @@ EVENT_SUGGESTION:
   }
 }
 
+For multiple events (when user mentions multiple symptoms/events):
+EVENT_SUGGESTION:
+[
+  {
+    "title": "First event title",
+    "type": "pain|symptom|medication-reminder|medical-appointment|exercise|other",
+    "description": "Brief description",
+    "date": "YYYY-MM-DD",
+    "time": "HH:MM",
+    "duration": 30,
+    "eventData": { /* relevant data */ }
+  },
+  {
+    "title": "Second event title",
+    "type": "pain|symptom|medication-reminder|medical-appointment|exercise|other",
+    "description": "Brief description", 
+    "date": "YYYY-MM-DD",
+    "time": "HH:MM",
+    "duration": 30,
+    "eventData": { /* relevant data */ }
+  }
+]
+
 Examples of when to suggest events:
 - "I have a headache right now" → Check if headache already logged today, if not, suggest pain event for current time
 - "I had a migraine yesterday at 3pm" → Check if migraine already logged for yesterday, if not, suggest pain event for yesterday 3pm
@@ -138,6 +162,12 @@ Examples of when to suggest events:
 - "I have a doctor appointment tomorrow at 2pm" → Check if appointment already scheduled for tomorrow 2pm, if not, suggest appointment
 - "I'm feeling nauseous" → Check if nausea already logged today, if not, suggest symptom event for current time
 - "My back hurt during my workout this morning" → Check if back pain already logged for this morning, if not, suggest pain event
+
+Examples of when to suggest MULTIPLE events:
+- "I had a headache and felt nauseous this morning" → Suggest array with both headache (pain) and nausea (symptom) events for this morning
+- "Yesterday I took my morning medication and had a doctor appointment at 3pm" → Suggest array with medication event for morning and appointment for 3pm
+- "I've been having back pain and anxiety all week" → Suggest array with pain and symptom events for recent days
+- "This morning I exercised, then had a migraine, and took my medication" → Suggest array with exercise, pain, and medication events
 
 Examples of when NOT to suggest events:
 - "Why do I keep getting headaches?" → General question, don't suggest

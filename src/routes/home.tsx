@@ -11,6 +11,7 @@ import 'react-big-calendar/lib/addons/dragAndDrop/styles.css'
 import '../styles/calendar.css'
 import { usePocketBaseStore } from '@/stores/pocketbase-store'
 import { useGeminiChat } from '@/hooks/useGeminiChat'
+import { useHealthModels } from '@/hooks/useHealthModels'
 import ReactMarkdown from 'react-markdown'
 import remarkBreaks from 'remark-breaks'
 import {
@@ -126,6 +127,9 @@ function Home() {
     const [currentMessage, setCurrentMessage] = useState('')
     const messagesEndRef = useRef<HTMLDivElement>(null)
 
+    // Health models functionality
+    const { callPhysicalModel, callMentalModel, callBothModels } = useHealthModels()
+
     // Abnormal symptom analysis state
     const [abnormalDateRanges, setAbnormalDateRanges] = useState<Array<{ start: Date, end: Date }>>([])
     const [hasAnalyzed, setHasAnalyzed] = useState(false)
@@ -157,6 +161,13 @@ function Home() {
         medication: '',
         dosage: '',
         frequency: '',
+        // Recurring medication fields
+        isRecurring: false,
+        recurringPattern: 'daily' as 'daily' | 'weekly' | 'custom',
+        recurringDays: [] as string[], // For weekly pattern: ['monday', 'tuesday', etc.]
+        recurringInterval: 1, // Every N days/weeks
+        recurringEndDate: '',
+        recurringTimes: [''] as string[], // Multiple times per day
         // Medical appointment-specific fields
         doctorName: '',
         appointmentType: '',
@@ -181,6 +192,13 @@ function Home() {
         medication: '',
         dosage: '',
         frequency: '',
+        // Recurring medication fields
+        isRecurring: false,
+        recurringPattern: 'daily' as 'daily' | 'weekly' | 'custom',
+        recurringDays: [] as string[],
+        recurringInterval: 1,
+        recurringEndDate: '',
+        recurringTimes: [''] as string[],
         // Medical appointment-specific fields
         doctorName: '',
         appointmentType: '',
@@ -430,70 +448,108 @@ function Home() {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
     }, [messages])
 
-    // Handle AI event suggestions
+    // Handle AI event suggestions (single event or multiple events)
     const handleAIEventSuggestion = async (eventData: any) => {
         try {
-            console.log('AI suggested event:', eventData)
+            // Check if eventData is an array of events or a single event
+            const eventsToAdd = Array.isArray(eventData) ? eventData : [eventData]
+            console.log('AI suggested events:', eventsToAdd)
 
-            // Parse date and time
-            const eventDate = eventData.date || new Date().toISOString().split('T')[0]
-            const eventTime = eventData.time || new Date().toTimeString().slice(0, 5)
-            const duration = eventData.duration || 30 // default 30 minutes
+            const addedEvents: string[] = []
+            const warnings: string[] = []
+            const errors: string[] = []
 
-            const [hours, minutes] = eventTime.split(':').map(Number)
-            const dateParts = eventDate.split('-').map(Number)
-            const startDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2], hours, minutes)
-            const endDate = new Date(startDate.getTime() + duration * 60000) // Add duration in minutes
+            // Process each event
+            for (const singleEventData of eventsToAdd) {
+                try {
+                    // Parse date and time
+                    const eventDate = singleEventData.date || new Date().toISOString().split('T')[0]
+                    const eventTime = singleEventData.time || new Date().toTimeString().slice(0, 5)
+                    const duration = singleEventData.duration || 30 // default 30 minutes
 
-            // Check for existing similar events on the same date (additional safety check)
-            const sameDate = myEvents.filter(event => {
-                const eventDate = new Date(event.start)
-                return eventDate.toDateString() === startDate.toDateString() &&
-                    event.type === eventData.type &&
-                    event.title.toLowerCase().includes(eventData.title.toLowerCase().split(' ')[0])
-            })
+                    const [hours, minutes] = eventTime.split(':').map(Number)
+                    const dateParts = eventDate.split('-').map(Number)
+                    const startDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2], hours, minutes)
+                    const endDate = new Date(startDate.getTime() + duration * 60000) // Add duration in minutes
 
-            if (sameDate.length > 0) {
-                const warningMsg = `⚠️ I noticed you already have a similar ${eventData.type} event ("${sameDate[0].title}") logged for ${eventDate}. Would you like me to add this as a separate event anyway?`
-                sendMessage('', { analysisResult: warningMsg }, () => { }) // Empty callback to prevent recursive suggestions
-                return
+                    // Check for existing similar events on the same date (additional safety check)
+                    const sameDate = myEvents.filter(event => {
+                        const eventDate = new Date(event.start)
+                        return eventDate.toDateString() === startDate.toDateString() &&
+                            event.type === singleEventData.type &&
+                            event.title.toLowerCase().includes(singleEventData.title.toLowerCase().split(' ')[0])
+                    })
+
+                    if (sameDate.length > 0) {
+                        warnings.push(`⚠️ Similar ${singleEventData.type} event ("${sameDate[0].title}") already exists for ${eventDate}`)
+                        continue // Skip this event but continue with others
+                    }
+
+                    // Create the event
+                    const newEvent = await createCalendarEvent({
+                        title: singleEventData.title,
+                        start: startDate,
+                        end: endDate,
+                        type: singleEventData.type || 'symptom',
+                        description: singleEventData.description || '',
+                        eventData: singleEventData.eventData || {}
+                    })
+
+                    // Log for SQL compatibility
+                    logEventForSQL('INSERT', {
+                        id: parseInt(newEvent.id, 10) || Date.now(),
+                        title: newEvent.title,
+                        start: newEvent.start,
+                        end: newEvent.end,
+                        type: newEvent.type as EventType,
+                        description: newEvent.description,
+                        eventData: newEvent.eventData
+                    })
+
+                    addedEvents.push(`"${singleEventData.title}" for ${eventDate} at ${eventTime}`)
+
+                } catch (eventErr) {
+                    console.error('Failed to create individual event:', eventErr)
+                    errors.push(`Failed to add "${singleEventData.title}"`)
+                }
             }
 
-            // Create the event
-            const newEvent = await createCalendarEvent({
-                title: eventData.title,
-                start: startDate,
-                end: endDate,
-                type: eventData.type || 'symptom',
-                description: eventData.description || '',
-                eventData: eventData.eventData || {}
-            })
+            // Reset analysis state to trigger re-analysis if any events were added
+            if (addedEvents.length > 0) {
+                setHasAnalyzed(false)
+                setAbnormalDateRanges([])
+            }
 
-            // REMOVED: Don't manually add to state - let real-time subscription handle it
-            // setMyEvents(prev => [...prev, newEvent])
+            // Create comprehensive status message
+            let statusMessage = ''
 
-            // Log for SQL compatibility
-            logEventForSQL('INSERT', {
-                id: parseInt(newEvent.id, 10) || Date.now(),
-                title: newEvent.title,
-                start: newEvent.start,
-                end: newEvent.end,
-                type: newEvent.type as EventType,
-                description: newEvent.description,
-                eventData: newEvent.eventData
-            })
+            if (addedEvents.length > 0) {
+                if (addedEvents.length === 1) {
+                    statusMessage += `✅ I've added ${addedEvents[0]} to your calendar.`
+                } else {
+                    statusMessage += `✅ I've added ${addedEvents.length} events to your calendar:\n${addedEvents.map(event => `• ${event}`).join('\n')}`
+                }
+            }
 
-            // Reset analysis state to trigger re-analysis
-            setHasAnalyzed(false)
-            setAbnormalDateRanges([])
+            if (warnings.length > 0) {
+                if (statusMessage) statusMessage += '\n\n'
+                statusMessage += warnings.join('\n')
+            }
 
-            // Show confirmation message
-            const confirmationMsg = `✅ I've added "${eventData.title}" to your calendar for ${eventDate} at ${eventTime}.`
-            sendMessage('', { analysisResult: confirmationMsg }, () => { }) // Empty callback to prevent recursive suggestions
+            if (errors.length > 0) {
+                if (statusMessage) statusMessage += '\n\n'
+                statusMessage += `❌ ${errors.join(', ')}. You can add these manually using the + button.`
+            }
+
+            if (!statusMessage) {
+                statusMessage = '❌ No events could be added. You can add them manually using the + button.'
+            }
+
+            sendMessage('', { analysisResult: statusMessage }, () => { }) // Empty callback to prevent recursive suggestions
 
         } catch (err) {
-            console.error('Failed to create AI-suggested event:', err)
-            const errorMsg = `❌ I wasn't able to add the event to your calendar. You can add it manually using the + button.`
+            console.error('Failed to process AI-suggested events:', err)
+            const errorMsg = `❌ I wasn't able to process the suggested events. You can add them manually using the + button.`
             sendMessage('', { analysisResult: errorMsg }, () => { }) // Empty callback to prevent recursive suggestions
         }
     }
@@ -579,6 +635,13 @@ function Home() {
             medication: calendarEvent.eventData?.medication || '',
             dosage: calendarEvent.eventData?.dosage || '',
             frequency: calendarEvent.eventData?.frequency || '',
+            // Recurring medication fields
+            isRecurring: calendarEvent.eventData?.isRecurring || false,
+            recurringPattern: (calendarEvent.eventData?.recurringPattern as 'daily' | 'weekly' | 'custom') || 'daily',
+            recurringDays: calendarEvent.eventData?.recurringDays || [],
+            recurringInterval: calendarEvent.eventData?.recurringInterval || 1,
+            recurringEndDate: calendarEvent.eventData?.recurringEndDate || '',
+            recurringTimes: calendarEvent.eventData?.recurringTimes || [''],
             doctorName: calendarEvent.eventData?.doctorName || '',
             appointmentType: calendarEvent.eventData?.appointmentType || '',
             notes: calendarEvent.eventData?.notes || ''
@@ -833,14 +896,67 @@ IMPORTANT:
         }
     }
 
-    // Custom event component to handle right-clicks
+    // Mark medication as taken
+    const markMedicationTaken = async (eventId: string, taken: boolean = true) => {
+        try {
+            const event = myEvents.find(e => e.id === eventId)
+            if (!event) return
+
+            const updatedEventData = {
+                ...event.eventData,
+                taken,
+                takenAt: taken ? new Date().toISOString() : undefined
+            }
+
+            const updatedEvent = await updateCalendarEvent(eventId, {
+                eventData: updatedEventData
+            })
+
+            // Update local state
+            setMyEvents(prev => prev.map(e => e.id === eventId ? updatedEvent : e))
+
+        } catch (err) {
+            console.error('Failed to mark medication as taken:', err)
+            setError('Failed to update medication status')
+        }
+    }
+
+    // Custom event component to handle right-clicks and medication status
     const CustomEvent = ({ event }: any) => {
+        const isMedication = event.type === 'medication-reminder'
+        const wasTaken = event.eventData?.taken || false
+        const isPast = new Date(event.end) < new Date()
+        
         return (
             <div
                 onContextMenu={(e) => handleEventRightClick(event, e)}
-                className="h-full w-full cursor-pointer"
+                className="h-full w-full cursor-pointer relative"
             >
-                <span>{event.title}</span>
+                <div className="flex items-center justify-between h-full">
+                    <span className="flex-1 truncate text-xs">{event.title}</span>
+                    {isMedication && (
+                        <div className="flex items-center gap-1">
+                            {wasTaken && (
+                                <span className="text-xs">✓</span>
+                            )}
+                            {isMedication && isPast && !wasTaken && (
+                                <span className="text-xs text-red-300">!</span>
+                            )}
+                            {isMedication && !isPast && (
+                                <button
+                                    onClick={(e) => {
+                                        e.stopPropagation()
+                                        markMedicationTaken(event.id, !wasTaken)
+                                    }}
+                                    className="text-xs bg-white/20 hover:bg-white/40 rounded px-1"
+                                    title={wasTaken ? "Mark as not taken" : "Mark as taken"}
+                                >
+                                    {wasTaken ? "✓" : "○"}
+                                </button>
+                            )}
+                        </div>
+                    )}
+                </div>
             </div>
         )
     }
@@ -939,6 +1055,119 @@ IMPORTANT:
         localStorage.setItem('sqlEventLogs', JSON.stringify(existingLogs))
     }
 
+    // Generate recurring medication events
+    const generateRecurringMedicationEvents = (formData: typeof quickAddForm) => {
+        const events: any[] = []
+        const startDate = new Date(formData.date)
+        const endDate = formData.recurringEndDate ? new Date(formData.recurringEndDate) : new Date(startDate.getTime() + (90 * 24 * 60 * 60 * 1000)) // Default 90 days
+        
+        // Handle multiple times per day
+        const times = formData.recurringTimes.filter(time => time.trim() !== '')
+        if (times.length === 0) times.push(formData.time) // Fallback to main time
+        
+        let currentDate = new Date(startDate)
+        
+        while (currentDate <= endDate) {
+            let shouldCreateEvent = false
+            
+            if (formData.recurringPattern === 'daily') {
+                shouldCreateEvent = true
+            } else if (formData.recurringPattern === 'weekly') {
+                const dayName = currentDate.toLocaleDateString('en-US', { weekday: 'long' }).toLowerCase()
+                shouldCreateEvent = formData.recurringDays.includes(dayName)
+            } else if (formData.recurringPattern === 'custom') {
+                // For custom pattern, check if current date matches the interval
+                const daysDiff = Math.floor((currentDate.getTime() - startDate.getTime()) / (24 * 60 * 60 * 1000))
+                shouldCreateEvent = daysDiff % formData.recurringInterval === 0
+            }
+            
+            if (shouldCreateEvent) {
+                // Create events for each time of day
+                times.forEach(timeStr => {
+                    const [hours, minutes] = timeStr.split(':').map(Number)
+                    const eventStart = new Date(currentDate)
+                    eventStart.setHours(hours, minutes, 0, 0)
+                    
+                    const eventEnd = new Date(eventStart)
+                    eventEnd.setMinutes(eventEnd.getMinutes() + 30) // 30 minute duration
+                    
+                    events.push({
+                        title: formData.title,
+                        start: eventStart,
+                        end: eventEnd,
+                        type: 'medication-reminder',
+                        description: formData.description,
+                        eventData: {
+                            medication: formData.medication,
+                            dosage: formData.dosage,
+                            frequency: formData.frequency,
+                            notes: formData.notes,
+                            isRecurring: true,
+                            recurringId: `${formData.medication}-${startDate.getTime()}` // Group related events
+                        }
+                    })
+                })
+            }
+            
+            // Move to next day
+            currentDate.setDate(currentDate.getDate() + 1)
+        }
+        
+        return events
+    }
+
+    // Get medication adherence summary
+    const getMedicationAdherence = () => {
+        const medicationGroups: Record<string, { 
+            name: string,
+            total: number,
+            taken: number,
+            missed: number,
+            upcomingToday: number
+        }> = {}
+
+        const now = new Date()
+        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+        const oneWeekAgo = new Date(today.getTime() - (7 * 24 * 60 * 60 * 1000))
+
+        // Group medication events by recurring ID or medication name
+        myEvents
+            .filter(event => event.type === 'medication-reminder' && event.start >= oneWeekAgo)
+            .forEach(event => {
+                const medicationName = event.eventData?.medication || event.title
+                const recurringId = event.eventData?.recurringId || medicationName
+                
+                if (!medicationGroups[recurringId]) {
+                    medicationGroups[recurringId] = {
+                        name: medicationName,
+                        total: 0,
+                        taken: 0,
+                        missed: 0,
+                        upcomingToday: 0
+                    }
+                }
+
+                medicationGroups[recurringId].total++
+
+                // Check if medication was taken (you could add a "taken" field to eventData)
+                const wasTaken = event.eventData?.taken || false
+                const isPast = event.end < now
+                const isToday = event.start >= today && event.start < new Date(today.getTime() + 24 * 60 * 60 * 1000)
+
+                if (isPast) {
+                    if (wasTaken) {
+                        medicationGroups[recurringId].taken++
+                    } else {
+                        medicationGroups[recurringId].missed++
+                    }
+                } else if (isToday) {
+                    medicationGroups[recurringId].upcomingToday++
+                }
+            })
+
+        return medicationGroups
+    }
+
     // Add new event with proper date handling
     const addQuickEvent = async () => {
         if (!isAuthenticated) {
@@ -957,6 +1186,66 @@ IMPORTANT:
             // Parse start date properly to avoid timezone issues
             const dateParts = quickAddForm.date.split('-').map(Number)
             const startDate = new Date(dateParts[0], dateParts[1] - 1, dateParts[2], hours, minutes)
+
+            // Check if this is a recurring medication reminder
+            if (quickAddForm.type === 'medication-reminder' && quickAddForm.isRecurring) {
+                // Generate all recurring events
+                const recurringEvents = generateRecurringMedicationEvents(quickAddForm)
+                
+                // Create all recurring events
+                for (const eventInfo of recurringEvents) {
+                    try {
+                        const newEvent = await createCalendarEvent(eventInfo)
+                        
+                        // Log for SQL compatibility
+                        logEventForSQL('INSERT', {
+                            id: parseInt(newEvent.id, 10) || Date.now(),
+                            title: newEvent.title,
+                            start: newEvent.start,
+                            end: newEvent.end,
+                            type: newEvent.type as EventType,
+                            description: newEvent.description,
+                            eventData: newEvent.eventData
+                        })
+                    } catch (err) {
+                        console.error('Failed to create recurring event:', err)
+                        // Continue with next event even if one fails
+                    }
+                }
+                
+                // Reset form and close modal
+                setQuickAddForm({
+                    title: '',
+                    type: 'symptom',
+                    description: '',
+                    date: new Date().toISOString().split('T')[0],
+                    time: '12:00',
+                    endDate: '',
+                    endTime: '',
+                    painLevel: 'mild',
+                    location: '',
+                    severity: 5,
+                    medication: '',
+                    dosage: '',
+                    frequency: '',
+                    isRecurring: false,
+                    recurringPattern: 'daily',
+                    recurringDays: [],
+                    recurringInterval: 1,
+                    recurringEndDate: '',
+                    recurringTimes: [''],
+                    doctorName: '',
+                    appointmentType: '',
+                    notes: ''
+                })
+                setShowQuickAdd(false)
+                
+                // Reset analysis state
+                setHasAnalyzed(false)
+                setAbnormalDateRanges([])
+                
+                return // Exit early for recurring medications
+            }
 
             // Handle end date
             let endDate: Date
@@ -1027,6 +1316,12 @@ IMPORTANT:
                 medication: '',
                 dosage: '',
                 frequency: '',
+                isRecurring: false,
+                recurringPattern: 'daily',
+                recurringDays: [],
+                recurringInterval: 1,
+                recurringEndDate: '',
+                recurringTimes: [''],
                 doctorName: '',
                 appointmentType: '',
                 notes: ''
@@ -1057,8 +1352,7 @@ IMPORTANT:
         setTimeout(() => setShowSQLLogs(true), 100)
     }
 
-    // Log available functions for debugging
-    console.log('Available functions:', { deleteEvent, getSQLLogs, clearSQLLogs })
+    // console.log('Available functions:', { deleteEvent, getSQLLogs, clearSQLLogs })
 
     return (
         <div className="min-h-screen bg-background" onClick={handleCloseContextMenu}>
@@ -1327,6 +1621,125 @@ IMPORTANT:
                                                 placeholder="e.g., twice daily, every 6 hours"
                                                 className="w-full px-3 py-2 text-sm bg-background border border-border rounded focus:outline-none focus:ring-2 focus:ring-ring"
                                             />
+                                        </div>
+                                        
+                                        {/* Recurring medication options */}
+                                        <div className="mt-4 border-t border-green-200 dark:border-green-700 pt-4">
+                                            <div className="flex items-center gap-2 mb-3">
+                                                <input
+                                                    type="checkbox"
+                                                    id="isRecurring"
+                                                    checked={quickAddForm.isRecurring}
+                                                    onChange={(e) => setQuickAddForm(prev => ({ ...prev, isRecurring: e.target.checked }))}
+                                                    className="rounded border-border"
+                                                />
+                                                <label htmlFor="isRecurring" className="text-sm font-medium">Set up recurring reminders</label>
+                                            </div>
+                                            
+                                            {quickAddForm.isRecurring && (
+                                                <div className="space-y-4 bg-green-100 dark:bg-green-800/30 p-3 rounded">
+                                                    <div>
+                                                        <label className="text-sm font-medium block mb-2">Repeat Pattern</label>
+                                                        <select
+                                                            value={quickAddForm.recurringPattern}
+                                                            onChange={(e) => setQuickAddForm(prev => ({ ...prev, recurringPattern: e.target.value as 'daily' | 'weekly' | 'custom' }))}
+                                                            className="w-full px-3 py-2 text-sm bg-background border border-border rounded focus:outline-none focus:ring-2 focus:ring-ring"
+                                                        >
+                                                            <option value="daily">Daily</option>
+                                                            <option value="weekly">Weekly (specific days)</option>
+                                                            <option value="custom">Every N days</option>
+                                                        </select>
+                                                    </div>
+                                                    
+                                                    {quickAddForm.recurringPattern === 'weekly' && (
+                                                        <div>
+                                                            <label className="text-sm font-medium block mb-2">Days of the week</label>
+                                                            <div className="flex flex-wrap gap-2">
+                                                                {['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'].map(day => (
+                                                                    <label key={day} className="flex items-center gap-1 text-xs">
+                                                                        <input
+                                                                            type="checkbox"
+                                                                            checked={quickAddForm.recurringDays.includes(day)}
+                                                                            onChange={(e) => {
+                                                                                if (e.target.checked) {
+                                                                                    setQuickAddForm(prev => ({ ...prev, recurringDays: [...prev.recurringDays, day] }))
+                                                                                } else {
+                                                                                    setQuickAddForm(prev => ({ ...prev, recurringDays: prev.recurringDays.filter(d => d !== day) }))
+                                                                                }
+                                                                            }}
+                                                                            className="rounded border-border"
+                                                                        />
+                                                                        {day.slice(0, 3)}
+                                                                    </label>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                    
+                                                    {quickAddForm.recurringPattern === 'custom' && (
+                                                        <div>
+                                                            <label className="text-sm font-medium block mb-2">Every N days</label>
+                                                            <input
+                                                                type="number"
+                                                                min="1"
+                                                                max="30"
+                                                                value={quickAddForm.recurringInterval}
+                                                                onChange={(e) => setQuickAddForm(prev => ({ ...prev, recurringInterval: parseInt(e.target.value) || 1 }))}
+                                                                className="w-full px-3 py-2 text-sm bg-background border border-border rounded focus:outline-none focus:ring-2 focus:ring-ring"
+                                                            />
+                                                        </div>
+                                                    )}
+                                                    
+                                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                        <div>
+                                                            <label className="text-sm font-medium block mb-2">End Date</label>
+                                                            <input
+                                                                type="date"
+                                                                value={quickAddForm.recurringEndDate}
+                                                                onChange={(e) => setQuickAddForm(prev => ({ ...prev, recurringEndDate: e.target.value }))}
+                                                                className="w-full px-3 py-2 text-sm bg-background border border-border rounded focus:outline-none focus:ring-2 focus:ring-ring"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                    
+                                                    <div>
+                                                        <label className="text-sm font-medium block mb-2">Times per day</label>
+                                                        {quickAddForm.recurringTimes.map((time, index) => (
+                                                            <div key={index} className="flex items-center gap-2 mb-2">
+                                                                <input
+                                                                    type="time"
+                                                                    value={time}
+                                                                    onChange={(e) => {
+                                                                        const newTimes = [...quickAddForm.recurringTimes]
+                                                                        newTimes[index] = e.target.value
+                                                                        setQuickAddForm(prev => ({ ...prev, recurringTimes: newTimes }))
+                                                                    }}
+                                                                    className="flex-1 px-3 py-2 text-sm bg-background border border-border rounded focus:outline-none focus:ring-2 focus:ring-ring"
+                                                                />
+                                                                {quickAddForm.recurringTimes.length > 1 && (
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => {
+                                                                            const newTimes = quickAddForm.recurringTimes.filter((_, i) => i !== index)
+                                                                            setQuickAddForm(prev => ({ ...prev, recurringTimes: newTimes }))
+                                                                        }}
+                                                                        className="px-2 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+                                                                    >
+                                                                        Remove
+                                                                    </button>
+                                                                )}
+                                                            </div>
+                                                        ))}
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => setQuickAddForm(prev => ({ ...prev, recurringTimes: [...prev.recurringTimes, ''] }))}
+                                                            className="text-xs bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600"
+                                                        >
+                                                            Add Time
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 )}
@@ -1907,15 +2320,39 @@ IMPORTANT:
                                         <p className="text-sm text-muted-foreground">AI-powered symptom analysis</p>
                                     </div>
                                 </div>
-                                <button
-                                    onClick={clearChat}
-                                    className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded"
-                                    title="Clear chat"
-                                >
-                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                    </svg>
-                                </button>
+                                <div className="flex items-center gap-2">
+                                    {/* Debug buttons for health models */}
+                                    <button
+                                        onClick={() => callPhysicalModel(['fatigue', 'headache', 'nausea'])}
+                                        className="text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded text-xs border border-border"
+                                        title="Test Physical Model"
+                                    >
+                                        Physical
+                                    </button>
+                                    <button
+                                        onClick={() => callMentalModel(['anxiety', 'depression', 'mood swings'])}
+                                        className="text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded text-xs border border-border"
+                                        title="Test Mental Model"
+                                    >
+                                        Mental
+                                    </button>
+                                    <button
+                                        onClick={() => callBothModels(['fatigue', 'anxiety', 'headache'])}
+                                        className="text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded text-xs border border-border"
+                                        title="Test Both Models"
+                                    >
+                                        Both
+                                    </button>
+                                    <button
+                                        onClick={clearChat}
+                                        className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded"
+                                        title="Clear chat"
+                                    >
+                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                    </button>
+                                </div>
                             </div>
                         </CardHeader>
 
