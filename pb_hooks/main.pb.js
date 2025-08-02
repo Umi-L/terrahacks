@@ -5,7 +5,7 @@ routerAdd("GET", "/hello/", (e) => {
 })
 
 routerAdd("POST", "/physical-model/", (e) => {
-    const data = e.json();
+    const data = e.requestInfo().body;
     const symptoms = data.symptoms;
 
     if (!Array.isArray(symptoms)) {
