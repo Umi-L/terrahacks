@@ -21,7 +21,7 @@ export function useAuthGuard(redirectTo: string = '/login') {
     return isAuthenticated
 }
 
-export function useAuthRedirect(redirectTo: string = '/dashboard') {
+export function useAuthRedirect(redirectTo: string = '/home') {
     const pocketBaseStore = usePocketBaseStore()
     const { isAuthenticated } = pocketBaseStore
     const navigate = useNavigate()

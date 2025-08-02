@@ -64,8 +64,8 @@ function Login() {
             if (result.success) {
                 // Update the store with the new auth state
                 pocketBaseStore.setAuth(pb.authStore.model, true)
-                // Redirect to dashboard after successful login
-                navigate({ to: '/dashboard' })
+                // Redirect to home after successful login
+                navigate({ to: '/home' })
             } else {
                 setErrors(prev => ({
                     ...prev,

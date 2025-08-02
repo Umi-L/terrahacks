@@ -1066,20 +1066,36 @@ IMPORTANT:
 
             {/* Error Display */}
             {error && (
-                <div className="px-4 py-2">
-                    <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-destructive text-sm">
+                <motion.div
+                    className="px-4 py-2"
+                    initial={{ opacity: 0, y: -20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -20 }}
+                    transition={{ duration: 0.3 }}
+                >
+                    <motion.div
+                        className="bg-destructive/10 border border-destructive/20 rounded-lg p-3 text-destructive text-sm"
+                        initial={{ scale: 0.95 }}
+                        animate={{ scale: 1 }}
+                        transition={{ duration: 0.2, delay: 0.1 }}
+                    >
                         {error}
                         <button
                             onClick={() => setError(null)}
-                            className="ml-2 hover:bg-destructive/20 rounded px-2 py-1"
+                            className="ml-2 hover:bg-destructive/20 rounded px-2 py-1 transition-colors"
                         >
                             ×
                         </button>
-                    </div>
-                </div>
+                    </motion.div>
+                </motion.div>
             )}
 
-            <div className="px-4 py-4 flex flex-col lg:flex-row gap-4 min-h-[calc(100vh-70px)]">
+            <motion.div
+                className="px-4 py-4 flex flex-col lg:flex-row gap-4 min-h-[calc(100vh-70px)]"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: 0.4 }}
+            >
                 {/* Calendar Section - Left Side on desktop, Top on mobile */}
                 <motion.div
                     className="flex-1 h-[calc(100vh-120px)] lg:h-[calc(100vh-120px)] min-h-[600px]"
@@ -1128,20 +1144,30 @@ IMPORTANT:
                                 />
 
                                 {/* Floating Action Button - positioned relative to calendar */}
-                                <button
+                                <motion.button
                                     onClick={() => setShowQuickAdd(!showQuickAdd)}
                                     className="absolute bottom-4 right-4 w-14 h-14 bg-primary text-primary-foreground rounded-full shadow-sm hover:bg-primary/90 hover:shadow-md transition-all duration-200 flex items-center justify-center z-40 hover:cursor-pointer"
+                                    initial={{ scale: 0, rotate: -180 }}
+                                    animate={{ scale: 1, rotate: 0 }}
+                                    transition={{ duration: 0.5, delay: 0.8, type: "spring", stiffness: 200 }}
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.95 }}
                                 >
-                                    {showQuickAdd ? (
-                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                    ) : (
-                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                        </svg>
-                                    )}
-                                </button>
+                                    <motion.div
+                                        animate={{ rotate: showQuickAdd ? 45 : 0 }}
+                                        transition={{ duration: 0.2 }}
+                                    >
+                                        {showQuickAdd ? (
+                                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        ) : (
+                                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                            </svg>
+                                        )}
+                                    </motion.div>
+                                </motion.button>
 
                                 {/* SQL Logs Button */}
                                 {/* <button
@@ -1160,20 +1186,45 @@ IMPORTANT:
 
                 {/* Fullscreen Quick Add Modal */}
                 {showQuickAdd && (
-                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                        <div className="bg-card border border-border rounded-lg p-6 w-full max-w-4xl max-h-[90vh] shadow-2xl flex flex-col overflow-hidden">
-                            <div className="flex items-center justify-between mb-4">
+                    <motion.div
+                        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        onClick={(e) => e.target === e.currentTarget && setShowQuickAdd(false)}
+                    >
+                        <motion.div
+                            className="bg-card border border-border rounded-lg p-6 w-full max-w-4xl max-h-[90vh] shadow-2xl flex flex-col overflow-hidden"
+                            initial={{ scale: 0.8, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.8, opacity: 0, y: 20 }}
+                            transition={{ duration: 0.3, type: "spring", stiffness: 300 }}
+                        >
+                            <motion.div
+                                className="flex items-center justify-between mb-4"
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.3, delay: 0.1 }}
+                            >
                                 <h3 className="text-lg font-semibold">Quick Add Event</h3>
-                                <button
+                                <motion.button
                                     onClick={() => setShowQuickAdd(false)}
                                     className="text-muted-foreground hover:text-foreground transition-colors"
+                                    whileHover={{ scale: 1.1 }}
+                                    whileTap={{ scale: 0.9 }}
                                 >
                                     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                     </svg>
-                                </button>
-                            </div>
-                            <div className="space-y-4 max-h-[70vh] overflow-y-auto px-1">
+                                </motion.button>
+                            </motion.div>
+                            <motion.div
+                                className="space-y-4 max-h-[70vh] overflow-y-auto px-1"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ duration: 0.3, delay: 0.2 }}
+                            >
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="text-sm font-medium text-foreground block mb-2">Title</label>
@@ -1391,19 +1442,37 @@ IMPORTANT:
                                         {isSubmitting ? 'Adding...' : 'Add Event'}
                                     </button>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
+                            </motion.div>
+                        </motion.div>
+                    </motion.div>
                 )}
 
                 {/* Event Details Modal */}
                 {showEventDetails && selectedEvent && (
-                    <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                        <div className="bg-card border border-border rounded-lg p-6 w-full max-w-4xl max-h-[90vh] shadow-2xl flex flex-col overflow-hidden">
-                            <div className="flex items-center justify-between mb-4">
+                    <motion.div
+                        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        transition={{ duration: 0.2 }}
+                        onClick={(e) => e.target === e.currentTarget && setShowEventDetails(false)}
+                    >
+                        <motion.div
+                            className="bg-card border border-border rounded-lg p-6 w-full max-w-4xl max-h-[90vh] shadow-2xl flex flex-col overflow-hidden"
+                            initial={{ scale: 0.8, opacity: 0, y: 20 }}
+                            animate={{ scale: 1, opacity: 1, y: 0 }}
+                            exit={{ scale: 0.8, opacity: 0, y: 20 }}
+                            transition={{ duration: 0.3, type: "spring", stiffness: 300 }}
+                        >
+                            <motion.div
+                                className="flex items-center justify-between mb-4"
+                                initial={{ opacity: 0, y: -10 }}
+                                animate={{ opacity: 1, y: 0 }}
+                                transition={{ duration: 0.3, delay: 0.1 }}
+                            >
                                 <h3 className="text-lg font-semibold">Edit Event</h3>
                                 <div className="flex gap-2">
-                                    <button
+                                    <motion.button
                                         onClick={async () => {
                                             if (confirm('Are you sure you want to delete this event?')) {
                                                 await deleteEvent(selectedEvent.id)
@@ -1412,24 +1481,33 @@ IMPORTANT:
                                             }
                                         }}
                                         className="px-3 py-1 bg-destructive text-destructive-foreground rounded text-sm hover:bg-destructive/90 transition-colors"
+                                        whileHover={{ scale: 1.05 }}
+                                        whileTap={{ scale: 0.95 }}
                                     >
                                         Delete
-                                    </button>
-                                    <button
+                                    </motion.button>
+                                    <motion.button
                                         onClick={() => {
                                             setShowEventDetails(false)
                                             setSelectedEvent(null)
                                         }}
                                         className="text-muted-foreground hover:text-foreground transition-colors"
+                                        whileHover={{ scale: 1.1 }}
+                                        whileTap={{ scale: 0.9 }}
                                     >
                                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                                         </svg>
-                                    </button>
+                                    </motion.button>
                                 </div>
-                            </div>
+                            </motion.div>
 
-                            <div className="space-y-4 max-h-[70vh] overflow-y-auto px-1">
+                            <motion.div
+                                className="space-y-4 max-h-[70vh] overflow-y-auto px-1"
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ duration: 0.3, delay: 0.2 }}
+                            >
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div>
                                         <label className="text-sm font-medium text-foreground block mb-2">Title</label>
@@ -1648,9 +1726,9 @@ IMPORTANT:
                                         {isSubmitting ? 'Saving...' : 'Save Changes'}
                                     </button>
                                 </div>
-                            </div>
-                        </div>
-                    </div>
+                            </motion.div>
+                        </motion.div>
+                    </motion.div>
                 )}
 
                 {/* SQL Logs Modal */}
@@ -1756,35 +1834,66 @@ IMPORTANT:
                     transition={{ duration: 0.6, delay: 0.4 }}
                 >
                     {/* Event Types Legend - Compact */}
-                    <div className="bg-card border border-border rounded-lg p-2 mb-3 flex-shrink-0">
-                        <h3 className="text-s font-semibold mb-1.5">Legend</h3>
-                        <div className="space-y-1.5">
+                    <motion.div
+                        className="bg-card border border-border rounded-lg p-2 mb-3 flex-shrink-0"
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ duration: 0.4, delay: 0.6 }}
+                    >
+                        <motion.h3
+                            className="text-s font-semibold mb-1.5"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ duration: 0.3, delay: 0.7 }}
+                        >
+                            Legend
+                        </motion.h3>
+                        <motion.div
+                            className="space-y-1.5"
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ duration: 0.3, delay: 0.8 }}
+                        >
                             <div className="flex flex-wrap gap-1.5">
-                                {Object.entries(eventTypeColors).map(([type, colors]) => (
-                                    <div key={type} className="flex items-center gap-1">
-                                        <div
+                                {Object.entries(eventTypeColors).map(([type, colors], index) => (
+                                    <motion.div
+                                        key={type}
+                                        className="flex items-center gap-1"
+                                        initial={{ opacity: 0, scale: 0.8 }}
+                                        animate={{ opacity: 1, scale: 1 }}
+                                        transition={{ duration: 0.2, delay: 0.9 + (index * 0.05) }}
+                                    >
+                                        <motion.div
                                             className="w-2.5 h-2.5 rounded"
                                             style={{ backgroundColor: colors.bg }}
+                                            whileHover={{ scale: 1.2 }}
                                         />
                                         <span className="text-xs text-foreground">{colors.label}</span>
-                                    </div>
+                                    </motion.div>
                                 ))}
                             </div>
                             <div className="border-t border-border pt-1.5">
                                 <div className="flex flex-wrap gap-1.5">
-                                    {Object.entries(painLevelColors).map(([level, colors]) => (
-                                        <div key={level} className="flex items-center gap-1">
-                                            <div
+                                    {Object.entries(painLevelColors).map(([level, colors], index) => (
+                                        <motion.div
+                                            key={level}
+                                            className="flex items-center gap-1"
+                                            initial={{ opacity: 0, scale: 0.8 }}
+                                            animate={{ opacity: 1, scale: 1 }}
+                                            transition={{ duration: 0.2, delay: 1.2 + (index * 0.05) }}
+                                        >
+                                            <motion.div
                                                 className="w-2.5 h-2.5 rounded"
                                                 style={{ backgroundColor: colors.bg }}
+                                                whileHover={{ scale: 1.2 }}
                                             />
                                             <span className="text-xs text-foreground">{colors.label}</span>
-                                        </div>
+                                        </motion.div>
                                     ))}
                                 </div>
                             </div>
-                        </div>
-                    </div>
+                        </motion.div>
+                    </motion.div>
 
                     <Card className="border shadow-lg outline outline-1 outline-border flex-1 flex flex-col min-h-0">
                         <CardHeader className="pb-4 border-b border-border flex-shrink-0">
@@ -1813,39 +1922,79 @@ IMPORTANT:
                         {/* Chat Messages */}
                         <CardContent className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
                             <div className="space-y-4">
-                                {messages.map((message) => (
-                                    <div
+                                {messages.map((message, index) => (
+                                    <motion.div
                                         key={message.id}
                                         className={`rounded-lg p-3 text-sm ${message.isUser
                                             ? 'bg-muted border border-border ml-8'
                                             : 'bg-background border border-border mr-8 text-muted-foreground'
                                             }`}
+                                        initial={{ opacity: 0, y: 20, x: message.isUser ? 20 : -20 }}
+                                        animate={{ opacity: 1, y: 0, x: 0 }}
+                                        transition={{
+                                            duration: 0.3,
+                                            delay: index * 0.1,
+                                            type: "spring",
+                                            stiffness: 200
+                                        }}
+                                        layout
                                     >
-                                        <div className="prose prose-sm max-w-none dark:prose-invert">
+                                        <motion.div
+                                            className="prose prose-sm max-w-none dark:prose-invert"
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            transition={{ duration: 0.2, delay: 0.1 }}
+                                        >
                                             <MarkdownRenderer content={message.content} />
-                                        </div>
-                                        <div className="text-xs text-muted-foreground mt-1">
+                                        </motion.div>
+                                        <motion.div
+                                            className="text-xs text-muted-foreground mt-1"
+                                            initial={{ opacity: 0 }}
+                                            animate={{ opacity: 1 }}
+                                            transition={{ duration: 0.2, delay: 0.2 }}
+                                        >
                                             {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                        </div>
-                                    </div>
+                                        </motion.div>
+                                    </motion.div>
                                 ))}
 
                                 {isChatLoading && (
-                                    <div className="bg-background border border-border rounded-lg p-3 mr-8 text-sm text-muted-foreground">
+                                    <motion.div
+                                        className="bg-background border border-border rounded-lg p-3 mr-8 text-sm text-muted-foreground"
+                                        initial={{ opacity: 0, y: 20, x: -20 }}
+                                        animate={{ opacity: 1, y: 0, x: 0 }}
+                                        exit={{ opacity: 0, y: -20 }}
+                                        transition={{ duration: 0.3 }}
+                                    >
                                         <div className="flex items-center gap-2">
-                                            <div className="animate-spin h-4 w-4 border-2 border-primary border-t-transparent rounded-full"></div>
-                                            Thinking...
+                                            <motion.div
+                                                className="h-4 w-4 border-2 border-primary border-t-transparent rounded-full"
+                                                animate={{ rotate: 360 }}
+                                                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                            ></motion.div>
+                                            <motion.span
+                                                initial={{ opacity: 0 }}
+                                                animate={{ opacity: 1 }}
+                                                transition={{ duration: 0.3, delay: 0.1 }}
+                                            >
+                                                Thinking...
+                                            </motion.span>
                                         </div>
-                                    </div>
+                                    </motion.div>
                                 )}
                                 <div ref={messagesEndRef} />
                             </div>
                         </CardContent>
 
                         {/* Input Area */}
-                        <div className="p-4 border-t border-border flex-shrink-0">
+                        <motion.div
+                            className="p-4 border-t border-border flex-shrink-0"
+                            initial={{ opacity: 0, y: 20 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            transition={{ duration: 0.4, delay: 1.4 }}
+                        >
                             <form onSubmit={handleSendMessage} className="flex gap-2">
-                                <input
+                                <motion.input
                                     type="text"
                                     value={currentMessage}
                                     onChange={(e) => setCurrentMessage(e.target.value)}
@@ -1853,25 +2002,38 @@ IMPORTANT:
                                     placeholder="Ask about your symptoms, patterns, or health..."
                                     disabled={isChatLoading}
                                     className="flex-1 px-3 py-2 text-sm bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent disabled:opacity-50"
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    transition={{ duration: 0.3, delay: 1.5 }}
+                                    whileFocus={{ scale: 1.02 }}
                                 />
-                                <button
+                                <motion.button
                                     type="submit"
                                     disabled={isChatLoading || !currentMessage.trim()}
                                     className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                                    initial={{ opacity: 0, scale: 0.8 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    transition={{ duration: 0.3, delay: 1.6 }}
+                                    whileHover={{ scale: 1.05 }}
+                                    whileTap={{ scale: 0.95 }}
                                 >
                                     {isChatLoading ? (
-                                        <div className="animate-spin h-4 w-4 border-2 border-primary-foreground border-t-transparent rounded-full"></div>
+                                        <motion.div
+                                            className="h-4 w-4 border-2 border-primary-foreground border-t-transparent rounded-full"
+                                            animate={{ rotate: 360 }}
+                                            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                        ></motion.div>
                                     ) : (
                                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                                         </svg>
                                     )}
-                                </button>
+                                </motion.button>
                             </form>
-                        </div>
+                        </motion.div>
                     </Card>
                 </motion.div>
-            </div>
+            </motion.div>
         </div>
     )
 }

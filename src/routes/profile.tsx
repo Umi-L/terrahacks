@@ -6,11 +6,11 @@ import { usePocketBaseStore } from '@/stores/pocketbase-store'
 import { authUtils } from '@/lib/auth-utils'
 import Navbar from '@/components/Navbar'
 
-export const Route = createFileRoute('/dashboard')({
-    component: Dashboard,
+export const Route = createFileRoute('/profile')({
+    component: Profile,
 })
 
-function Dashboard() {
+function Profile() {
     const pocketBaseStore = usePocketBaseStore()
     const { user, isAuthenticated } = pocketBaseStore
     const navigate = useNavigate()

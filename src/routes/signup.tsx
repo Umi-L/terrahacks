@@ -81,8 +81,8 @@ function Signup() {
             if (result.success) {
                 // Update the store with the new auth state
                 pocketBaseStore.setAuth(pb.authStore.model, true)
-                // Redirect to dashboard after successful registration
-                navigate({ to: '/dashboard' })
+                // Redirect to settings for new users to complete required information
+                navigate({ to: '/settings' })
             } else {
                 setErrors(prev => ({
                     ...prev,
