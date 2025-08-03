@@ -226,6 +226,10 @@
             "markTaken": "Mark as Taken",
             "markNotTaken": "Mark as Not Taken"
         },
+        "chatTitle": "Your Medical Mole",
+        "chatSubtitle": "AI-powered symptom analysis",
+        "chatWelcome": "Hi! I'm your health assistant. I can help you analyze your symptoms, track patterns, and provide health recommendations. How can I assist you today?",
+        "disclaimer": "Disclaimer: Nothing provided in this chat is medical advice. Always contact a medical professional in the case of an emergency.",
         "event": "Event"
     },
     "common": {

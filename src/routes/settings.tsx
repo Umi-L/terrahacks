@@ -262,10 +262,9 @@ function Settings() {
         try {
             setIsLoading(true)
             if (user?.id) {
-                // Get all user's health events
-                const events = await pb.collection('health_events').getList(1, 1000, {
-                    filter: `user_id = "${user.id}"`,
-                    sort: '-date'
+                // Get all user's calendar events
+                const events = await pb.collection('calendar_data').getList(1, 1000, {
+                    filter: `user_id = "${user.id}"`
                 })
 
                 // Get healthcare provider info
@@ -315,13 +314,13 @@ function Settings() {
         try {
             setIsLoading(true)
             if (user?.id) {
-                // Delete all health events
-                const events = await pb.collection('health_events').getList(1, 1000, {
+                // Delete all calendar events
+                const events = await pb.collection('calendar_data').getList(1, 1000, {
                     filter: `user_id = "${user.id}"`
                 })
 
                 for (const event of events.items) {
-                    await pb.collection('health_events').delete(event.id)
+                    await pb.collection('calendar_data').delete(event.id)
                 }
 
                 // Delete healthcare provider info

@@ -1,5 +1,7 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { GoogleGenerativeAI } from '@google/generative-ai'
+import { useTranslation } from 'react-i18next'
+import { useHealthModels } from './useHealthModels'
 
 export interface ChatMessage {
     id: string
@@ -10,10 +12,14 @@ export interface ChatMessage {
 }
 
 export const useGeminiChat = () => {
+
+    const { t, i18n } = useTranslation()
+    const { callPhysicalModel, callMentalModel, physicalModelSymptoms, mentalModelSymptoms } = useHealthModels()
+
     const [messages, setMessages] = useState<ChatMessage[]>([
         {
             id: '1',
-            content: "Hi! I'm your health assistant. I can help you analyze your symptoms, track patterns, and provide health recommendations. How can I assist you today?",
+            content: t("home.chatWelcome"),
             isUser: false,
             timestamp: new Date(),
             type: 'text'
@@ -22,6 +28,22 @@ export const useGeminiChat = () => {
     const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<string | null>(null)
     const genAI = useRef<GoogleGenerativeAI | null>(null)
+
+    // Update welcome message when language changes
+    useEffect(() => {
+        setMessages(prev => {
+            const updatedMessages = [...prev]
+            // Find and update the welcome message (usually the first message with id '1')
+            const welcomeMessageIndex = updatedMessages.findIndex(msg => msg.id === '1' && !msg.isUser)
+            if (welcomeMessageIndex !== -1) {
+                updatedMessages[welcomeMessageIndex] = {
+                    ...updatedMessages[welcomeMessageIndex],
+                    content: t("home.chatWelcome")
+                }
+            }
+            return updatedMessages
+        })
+    }, [i18n.language, t])
 
     // Initialize Gemini API
     const initializeGemini = useCallback(() => {
@@ -33,6 +55,131 @@ export const useGeminiChat = () => {
         genAI.current = new GoogleGenerativeAI(apiKey)
         return true
     }, [])
+
+    // Function to analyze symptoms in user message and call appropriate ML model
+    const analyzeSymptoms = async (userMessage: string) => {
+        // Don't analyze if message is too short or doesn't seem health-related
+        if (!userMessage || userMessage.trim().length < 5) {
+            return ''
+        }
+
+        const messageLower = userMessage.toLowerCase()
+        
+        // Skip analysis for common non-symptom phrases
+        const skipPhrases = [
+            'how are you',
+            'hello',
+            'hi',
+            'thanks',
+            'thank you',
+            'goodbye',
+            'bye',
+            'what is',
+            'how do',
+            'can you help',
+            'how does this work'
+        ]
+        
+        const shouldSkip = skipPhrases.some(phrase => messageLower.includes(phrase))
+        if (shouldSkip) {
+            return ''
+        }
+
+        try {
+            if (!genAI.current && !initializeGemini()) {
+                return ''
+            }
+
+            const model = genAI.current!.getGenerativeModel({ model: "gemini-2.5-flash-lite" })
+
+            // Create symptom extraction prompt
+            const extractionPrompt = `You are a medical symptom extraction assistant. Analyze the following user message and extract any symptoms that match the provided symptom lists.
+
+User message: "${userMessage}"
+
+Available Physical Symptoms:
+${physicalModelSymptoms.join(', ')}
+
+Available Mental Health Symptoms:
+${mentalModelSymptoms.join(', ')}
+
+Instructions:
+1. Carefully read the user message
+2. Identify any symptoms mentioned that EXACTLY match the symptoms in the lists above
+3. Return ONLY the exact symptom names from the lists (no variations or interpretations)
+4. Separate physical and mental symptoms
+5. If no symptoms are found, return empty arrays
+
+Return your response in this EXACT JSON format:
+{
+  "physicalSymptoms": ["symptom1", "symptom2"],
+  "mentalSymptoms": ["symptom1", "symptom2"]
+}
+
+Only include symptoms that are explicitly mentioned or clearly implied in the user's message and that EXACTLY match the symptom names in the provided lists.`
+
+            const extractionResult = await model.generateContent(extractionPrompt)
+            const extractionResponse = await extractionResult.response
+            const extractionText = extractionResponse.text()
+
+            console.log('🔍 Symptom extraction response:', extractionText)
+
+            // Parse the JSON response
+            const cleanedText = extractionText.replace(/```json\n?|\n?```/g, '').trim()
+            const extractedSymptoms = JSON.parse(cleanedText)
+
+            const detectedPhysicalSymptoms = extractedSymptoms.physicalSymptoms || []
+            const detectedMentalSymptoms = extractedSymptoms.mentalSymptoms || []
+
+            console.log('🔬 Extracted physical symptoms:', detectedPhysicalSymptoms)
+            console.log('🧠 Extracted mental symptoms:', detectedMentalSymptoms)
+
+            let mlResults = ''
+
+            // Only call models if we have detected symptoms and they meet minimum criteria
+            const minSymptomsForAnalysis = 1 // Minimum number of symptoms to trigger analysis
+
+            // Call physical model if physical symptoms detected
+            if (detectedPhysicalSymptoms.length >= minSymptomsForAnalysis) {
+                console.log('🔬 Calling physical model with symptoms:', detectedPhysicalSymptoms)
+                
+                try {
+                    const physicalResult = await callPhysicalModel(detectedPhysicalSymptoms)
+                    if (physicalResult.success && physicalResult.data) {
+                        mlResults += `\n\n**🔬 AI Physical Health Analysis** (based on symptoms: ${detectedPhysicalSymptoms.join(', ')}):\n${physicalResult.data}\n\n*⚠️ This is an AI analysis tool, NOT a medical diagnosis. Please consult with your healthcare provider for proper evaluation and treatment.*`
+                        console.log('✅ Physical model analysis completed')
+                    } else {
+                        console.log('❌ Physical model failed or returned no data')
+                    }
+                } catch (error) {
+                    console.error('❌ Error calling physical model:', error)
+                }
+            }
+
+            // Call mental model if mental symptoms detected
+            if (detectedMentalSymptoms.length >= minSymptomsForAnalysis) {
+                console.log('🧠 Calling mental model with symptoms:', detectedMentalSymptoms)
+                
+                try {
+                    const mentalResult = await callMentalModel(detectedMentalSymptoms)
+                    if (mentalResult.success && mentalResult.data) {
+                        mlResults += `\n\n**🧠 AI Mental Health Analysis** (based on symptoms: ${detectedMentalSymptoms.join(', ')}):\n${mentalResult.data}\n\n*⚠️ This is an AI analysis tool, NOT a medical diagnosis. Please consult with a mental health professional for proper evaluation and treatment.*`
+                        console.log('✅ Mental model analysis completed')
+                    } else {
+                        console.log('❌ Mental model failed or returned no data')
+                    }
+                } catch (error) {
+                    console.error('❌ Error calling mental model:', error)
+                }
+            }
+
+            return mlResults
+
+        } catch (error) {
+            console.error('❌ Error in symptom extraction:', error)
+            return ''
+        }
+    }
 
     // Send message to Gemini
     const sendMessage = useCallback(async (userMessage: string, healthData?: any, onEventSuggestion?: (eventData: any) => void) => {
@@ -68,7 +215,10 @@ export const useGeminiChat = () => {
                 throw new Error('Gemini API key not configured. Please add your API key to the .env file. See GEMINI_SETUP.md for instructions.')
             }
 
-            const model = genAI.current!.getGenerativeModel({ model: "gemini-2.0-flash" })
+            const model = genAI.current!.getGenerativeModel({ model: "gemini-2.5-flash-lite" })
+
+            // Analyze symptoms using ML models
+            const mlAnalysis = await analyzeSymptoms(userMessage)
 
             // Get current date context
             const currentDate = new Date()
@@ -199,6 +349,11 @@ CRITICAL: When user mentions a time period (yesterday, this morning, last week, 
                 prompt += `\nBefore suggesting any event, carefully review the existing events above to avoid duplicates. Pay special attention to events on the same date or time period mentioned by the user.`
             }
 
+            // Add ML analysis results if available
+            if (mlAnalysis) {
+                prompt += `\nMachine Learning Analysis Results:\n${mlAnalysis}\n\nPlease consider this AI analysis as additional context for your response, but always emphasize that this is NOT a medical diagnosis and the user should consult with healthcare professionals.`
+            }
+
             const result = await model.generateContent(prompt)
             const response = await result.response
             const text = response.text()
@@ -229,9 +384,15 @@ CRITICAL: When user mentions a time period (yesterday, this morning, last week, 
                 responseType = 'appointment'
             }
 
+            // Combine Gemini response with ML analysis if available
+            let finalContent = responseText
+            if (mlAnalysis) {
+                finalContent += mlAnalysis
+            }
+
             const aiMsg: ChatMessage = {
                 id: (Date.now() + 1).toString(),
-                content: responseText,
+                content: finalContent,
                 isUser: false,
                 timestamp: new Date(),
                 type: responseType
@@ -259,21 +420,21 @@ CRITICAL: When user mentions a time period (yesterday, this morning, last week, 
         } finally {
             setIsLoading(false)
         }
-    }, [initializeGemini])
+    }, [initializeGemini, callPhysicalModel, callMentalModel, physicalModelSymptoms, mentalModelSymptoms])
 
     // Clear chat history
     const clearChat = useCallback(() => {
         setMessages([
             {
                 id: '1',
-                content: "Hi! I'm your health assistant. I can help you analyze your symptoms, track patterns, and provide health recommendations. How can I assist you today?",
+                content: t("home.chatWelcome"),
                 isUser: false,
                 timestamp: new Date(),
                 type: 'text'
             }
         ])
         setError(null)
-    }, [])
+    }, [t])
 
     // Clear only analysis messages
     const clearAnalysisMessages = useCallback(() => {

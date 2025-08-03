@@ -298,13 +298,25 @@ function Home() {
 
     // Re-analyze symptoms when events change and user is authenticated
     useEffect(() => {
+        console.log('useEffect for analysis triggered:', {
+            isAuthenticated,
+            eventsLength: myEvents.length,
+            hasAnalyzed,
+            canAnalyze: isAuthenticated && myEvents.length > 0 && !hasAnalyzed
+        })
+
         if (isAuthenticated && myEvents.length > 0 && !hasAnalyzed) {
+            console.log('Setting timeout for analysis...')
             // Add a small delay to avoid rapid re-analysis
             const timeoutId = setTimeout(() => {
+                console.log('Timeout fired, calling analyzeSymptomPatterns')
                 analyzeSymptomPatterns(myEvents)
             }, 1000)
 
-            return () => clearTimeout(timeoutId)
+            return () => {
+                console.log('Clearing analysis timeout')
+                clearTimeout(timeoutId)
+            }
         }
     }, [myEvents, isAuthenticated, hasAnalyzed])
 
@@ -731,7 +743,12 @@ function Home() {
 
     // Analyze symptoms for abnormal patterns using Gemini
     const analyzeSymptomPatterns = async (events: CalendarEvent[]) => {
-        if (!events.length || hasAnalyzed) return
+        console.log('analyzeSymptomPatterns called with:', events.length, 'events, hasAnalyzed:', hasAnalyzed)
+
+        if (!events.length || hasAnalyzed) {
+            console.log('Skipping analysis - no events or already analyzed')
+            return
+        }
 
         console.log('Starting symptom analysis with', events.length, 'events')
 
@@ -804,6 +821,8 @@ IMPORTANT:
             const { GoogleGenerativeAI } = await import('@google/generative-ai')
             const apiKey = import.meta.env.VITE_GEMINI_API_KEY
 
+            console.log('Gemini API key configured:', apiKey ? 'Yes' : 'No')
+
             if (!apiKey || apiKey === 'your_gemini_api_key_here') {
                 console.warn('Gemini API key not configured for symptom analysis')
                 setHasAnalyzed(true)
@@ -811,7 +830,7 @@ IMPORTANT:
             }
 
             const genAI = new GoogleGenerativeAI(apiKey)
-            const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" })
+            const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" })
 
             const result = await model.generateContent(analysisPrompt)
             const response = await result.response
@@ -854,11 +873,15 @@ IMPORTANT:
                     analysisMessage = 'Symptom Analysis: No concerning patterns detected in your recent symptoms. ' + (analysis.recommendation || 'Keep up the good work tracking your health!')
                 }
 
+                console.log('Adding analysis message to chat:', analysisMessage)
+
                 // Remove any existing analysis messages before adding the new one
                 clearAnalysisMessages()
 
                 // Add the analysis message to chat
                 sendMessage('', { analysisResult: analysisMessage }, handleAIEventSuggestion)
+            } else {
+                console.log('No analysis message to add - no abnormal ranges or recommendations')
             }
 
             setHasAnalyzed(true)
@@ -2320,8 +2343,8 @@ IMPORTANT:
                                         <span className="text-primary-foreground font-semibold text-sm"><img src="/MedicalMole.svg" alt="Logo" className="w-6 h-6 object-contain" /></span>
                                     </div>
                                     <div>
-                                        <CardTitle className="text-lg">Your Medical Mole</CardTitle>
-                                        <p className="text-sm text-muted-foreground">AI-powered symptom analysis</p>
+                                        <CardTitle className="text-lg">{t('home.chatTitle')}</CardTitle>
+                                        <p className="text-sm text-muted-foreground">{t('home.chatSubtitle')}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-2">
@@ -2356,6 +2379,18 @@ IMPORTANT:
                         {/* Chat Messages */}
                         <CardContent className="flex-1 overflow-y-auto p-4 space-y-4 min-h-0">
                             <div className="space-y-4">
+                                {messages.length === 0 && (
+                                    <motion.div
+                                        className="bg-background border border-border rounded-lg p-3 mr-8 text-sm text-muted-foreground"
+                                        initial={{ opacity: 0, y: 20, x: -20 }}
+                                        animate={{ opacity: 1, y: 0, x: 0 }}
+                                        transition={{ duration: 0.3 }}
+                                    >
+                                        <div className="prose prose-sm max-w-none dark:prose-invert">
+                                            {t('home.chatWelcome')}
+                                        </div>
+                                    </motion.div>
+                                )}
                                 {messages.map((message, index) => (
                                     <motion.div
                                         key={message.id}
@@ -2433,7 +2468,7 @@ IMPORTANT:
                                     value={currentMessage}
                                     onChange={(e) => setCurrentMessage(e.target.value)}
                                     onKeyDown={handleKeyPress}
-                                    placeholder="Ask about your symptoms, patterns, or health..."
+                                    placeholder={t('home.chatPlaceholder')}
                                     disabled={isChatLoading}
                                     className="flex-1 px-3 py-2 text-sm bg-background border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent disabled:opacity-50"
                                     initial={{ opacity: 0 }}
@@ -2464,6 +2499,9 @@ IMPORTANT:
                                     )}
                                 </motion.button>
                             </form>
+                            <div className="mt-3 text-xs text-muted-foreground text-center px-2">
+                                <strong>{t('home.disclaimer')}</strong>
+                            </div>
                         </motion.div>
                     </Card>
                 </motion.div>

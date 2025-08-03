@@ -1,7 +1,7 @@
 import PocketBase from 'pocketbase'
 
 // Create a singleton PocketBase instance
-export const pb = new PocketBase('http://10.59.152.233:8090')
+export const pb = new PocketBase('http://10.198.92.233:8090')
 
 export const authUtils = {
     login: async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
