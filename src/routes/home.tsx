@@ -11,7 +11,6 @@ import 'react-big-calendar/lib/addons/dragAndDrop/styles.css'
 import '../styles/calendar.css'
 import { usePocketBaseStore } from '@/stores/pocketbase-store'
 import { useGeminiChat } from '@/hooks/useGeminiChat'
-import { useHealthModels } from '@/hooks/useHealthModels'
 import ReactMarkdown from 'react-markdown'
 import remarkBreaks from 'remark-breaks'
 import { useTranslation } from 'react-i18next'
@@ -48,6 +47,97 @@ export const Route = createFileRoute('/home')({
 
 const localizer = momentLocalizer(moment)
 const DragAndDropCalendar = withDragAndDrop(Calendar)
+
+// Custom Toolbar Component
+interface CustomToolbarProps {
+    view: typeof Views[keyof typeof Views]
+    date: Date
+    onView: (view: typeof Views[keyof typeof Views]) => void
+    onNavigate: (action: 'PREV' | 'NEXT' | 'TODAY') => void
+}
+
+const CustomToolbar = ({ view, date, onView, onNavigate }: CustomToolbarProps) => {
+    const formatDate = () => {
+        if (view === Views.MONTH) {
+            return moment(date).format('MMMM YYYY')
+        } else if (view === Views.WEEK) {
+            const start = moment(date).startOf('week')
+            const end = moment(date).endOf('week')
+            return `${start.format('MMM D')} - ${end.format('MMM D, YYYY')}`
+        } else if (view === Views.DAY) {
+            return moment(date).format('dddd, MMMM D, YYYY')
+        }
+        return moment(date).format('MMMM YYYY')
+    }
+
+    return (
+        <div className="flex items-center justify-between p-3 border-b border-border bg-card">
+            {/* Navigation Controls */}
+            <div className="flex items-center gap-2">
+                <button
+                    onClick={() => onNavigate('TODAY')}
+                    className="px-3 py-1.5 text-sm bg-primary text-primary-foreground rounded hover:bg-primary/90 transition-all duration-200 hover:scale-105 active:scale-95 hover:cursor-pointer"
+                >
+                    Today
+                </button>
+                <button
+                    onClick={() => onNavigate('PREV')}
+                    className="p-2 hover:bg-muted rounded transition-all duration-200 hover:scale-105 active:scale-95 hover:cursor-pointer"
+                    title="Previous"
+                >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                <button
+                    onClick={() => onNavigate('NEXT')}
+                    className="p-2 hover:bg-muted rounded transition-all duration-200 hover:scale-105 active:scale-95 hover:cursor-pointer"
+                    title="Next"
+                >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
+            </div>
+
+            {/* Current Date Display */}
+            <div className="text-lg font-semibold">
+                {formatDate()}
+            </div>
+
+            {/* View Controls */}
+            <div className="flex items-center gap-1 bg-muted p-1 rounded">
+                <button
+                    onClick={() => onView(Views.MONTH)}
+                    className={`px-3 py-1.5 text-sm rounded transition-all duration-200 hover:cursor-pointer ${view === Views.MONTH
+                        ? 'bg-background shadow-sm font-medium'
+                        : 'hover:bg-background/50 hover:scale-105 active:scale-95'
+                        }`}
+                >
+                    Month
+                </button>
+                <button
+                    onClick={() => onView(Views.WEEK)}
+                    className={`px-3 py-1.5 text-sm rounded transition-all duration-200 hover:cursor-pointer ${view === Views.WEEK
+                        ? 'bg-background shadow-sm font-medium'
+                        : 'hover:bg-background/50 hover:scale-105 active:scale-95'
+                        }`}
+                >
+                    Week
+                </button>
+                <button
+                    onClick={() => onView(Views.DAY)}
+                    className={`px-3 py-1.5 text-sm rounded transition-all duration-200 hover:cursor-pointer ${view === Views.DAY
+                        ? 'bg-background shadow-sm font-medium'
+                        : 'hover:bg-background/50 hover:scale-105 active:scale-95'
+                        }`}
+                >
+                    Day
+                </button>
+            </div>
+        </div>
+    )
+}
 
 // Simple Markdown renderer component
 const MarkdownRenderer = ({ content }: { content: string }) => {
@@ -126,13 +216,14 @@ function Home() {
     const [isSubmitting, setIsSubmitting] = useState(false)
     const [error, setError] = useState<string | null>(null)
 
+    // Calendar view and date state
+    const [currentView, setCurrentView] = useState<typeof Views[keyof typeof Views]>(Views.MONTH)
+    const [currentDate, setCurrentDate] = useState(new Date(2025, 7, 2))
+
     // Chat functionality
     const { messages, isLoading: isChatLoading, sendMessage, clearChat, clearAnalysisMessages } = useGeminiChat()
     const [currentMessage, setCurrentMessage] = useState('')
     const messagesEndRef = useRef<HTMLDivElement>(null)
-
-    // Health models functionality
-    const { callPhysicalModel, callMentalModel } = useHealthModels()
 
     // Abnormal symptom analysis state
     const [abnormalDateRanges, setAbnormalDateRanges] = useState<Array<{ start: Date, end: Date }>>([])
@@ -346,12 +437,10 @@ function Home() {
         async ({ event, start, end }: any) => {
             try {
                 // Optimistic update - update UI immediately
-                const updatedEvents = ((prev) => {
+                setMyEvents(prev => {
                     const filtered = prev.filter((ev) => ev.id !== event.id)
                     return [...filtered, { ...event, start, end }]
-                })(myEvents)
-
-                setMyEvents(updatedEvents)
+                })
 
                 // Update the backend
                 const updatedEvent = await updateCalendarEvent(event.id, { start, end })
@@ -385,19 +474,18 @@ function Home() {
                 }
             }
         },
-        [myEvents]
+        []
     )
 
     const resizeEvent = useCallback(
         async ({ event, start, end }: any) => {
             try {
                 const updatedEvent = await updateCalendarEvent(event.id, { start, end })
-                const updatedEvents = ((prev) => {
+
+                setMyEvents(prev => {
                     const filtered = prev.filter((ev) => ev.id !== event.id)
                     return [...filtered, updatedEvent]
-                })(myEvents)
-
-                setMyEvents(updatedEvents)
+                })
 
                 // Keep SQL logging for compatibility
                 logEventForSQL('UPDATE', {
@@ -417,13 +505,11 @@ function Home() {
                 setError(t('home.errorUpdating'))
             }
         },
-        [myEvents]
+        []
     )
 
-    const defaultDate = useMemo(() => new Date(2025, 7, 2), [])
-
     // Handle right-click on events to show context menu
-    const handleEventRightClick = (event: any, e: React.MouseEvent) => {
+    const handleEventRightClick = useCallback((event: any, e: React.MouseEvent) => {
         e.preventDefault()
         const calendarEvent = event as CalendarEvent
         setContextMenu({
@@ -432,7 +518,7 @@ function Home() {
             y: e.clientY,
             event: calendarEvent
         })
-    }
+    }, [])
 
     // Close context menu when clicking elsewhere
     const handleCloseContextMenu = () => {
@@ -628,7 +714,7 @@ function Home() {
     }
 
     // Handle clicking on an event to view/edit details
-    const handleEventClick = (event: any) => {
+    const handleEventClick = useCallback((event: any) => {
         const calendarEvent = event as CalendarEvent
         setSelectedEvent(calendarEvent)
         setShowEventDetails(true)
@@ -662,7 +748,7 @@ function Home() {
             appointmentType: calendarEvent.eventData?.appointmentType || '',
             notes: calendarEvent.eventData?.notes || ''
         })
-    }
+    }, [])
 
     // Update an existing event
     const updateEvent = async () => {
@@ -924,32 +1010,37 @@ IMPORTANT:
     }
 
     // Mark medication as taken
-    const markMedicationTaken = async (eventId: string, taken: boolean = true) => {
+    const markMedicationTaken = useCallback(async (eventId: string, taken: boolean = true) => {
         try {
-            const event = myEvents.find(e => e.id === eventId)
-            if (!event) return
+            setMyEvents(prev => {
+                const event = prev.find(e => e.id === eventId)
+                if (!event) return prev
 
-            const updatedEventData = {
-                ...event.eventData,
-                taken,
-                takenAt: taken ? new Date().toISOString() : undefined
-            }
+                const updatedEventData = {
+                    ...event.eventData,
+                    taken,
+                    takenAt: taken ? new Date().toISOString() : undefined
+                }
 
-            const updatedEvent = await updateCalendarEvent(eventId, {
-                eventData: updatedEventData
+                // Optimistically update the local state
+                updateCalendarEvent(eventId, {
+                    eventData: updatedEventData
+                }).catch(err => {
+                    console.error('Failed to mark medication as taken:', err)
+                    // setError('Failed to update medication status')
+                })
+
+                return prev.map(e => e.id === eventId ? { ...e, eventData: updatedEventData } : e)
             })
-
-            // Update local state
-            setMyEvents(prev => prev.map(e => e.id === eventId ? updatedEvent : e))
 
         } catch (err) {
             console.error('Failed to mark medication as taken:', err)
-            setError('Failed to update medication status')
+            // setError('Failed to update medication status')
         }
-    }
+    }, [])
 
     // Custom event component to handle right-clicks and medication status
-    const CustomEvent = ({ event }: any) => {
+    const CustomEvent = useMemo(() => ({ event }: any) => {
         const isMedication = event.type === 'medication-reminder'
         const wasTaken = event.eventData?.taken || false
         const isPast = new Date(event.end) < new Date()
@@ -986,15 +1077,29 @@ IMPORTANT:
                 </div>
             </div>
         )
-    }
+    }, [handleEventRightClick, markMedicationTaken])
 
     // Custom event style based on type and pain level
-    const eventStyleGetter = (event: any) => {
-        let colors = eventTypeColors[event.type as EventType] || eventTypeColors.symptom
+    const eventStyleGetter = useCallback((event: any) => {
+        const eventTypeColorsRef = {
+            'pain': { bg: '#ef4444', border: '#dc2626' },
+            'symptom': { bg: '#8b5cf6', border: '#7c3aed' },
+            'event': { bg: '#06b6d4', border: '#0891b2' },
+            'medical-appointment': { bg: '#ec4899', border: '#db2777' },
+            'medication-reminder': { bg: '#517d0c', border: '#446e09ff' }
+        }
+
+        const painLevelColorsRef = {
+            'mild': { bg: '#10b981', border: '#059669' },
+            'moderate': { bg: '#f59e0b', border: '#d97706' },
+            'severe': { bg: '#ef4444', border: '#dc2626' }
+        }
+
+        let colors = eventTypeColorsRef[event.type as EventType] || eventTypeColorsRef.symptom
 
         // Override colors for pain events based on pain level
         if (event.type === 'pain' && event.eventData?.painLevel) {
-            colors = painLevelColors[event.eventData.painLevel as PainLevel] || colors
+            colors = painLevelColorsRef[event.eventData.painLevel as PainLevel] || colors
         }
 
         return {
@@ -1006,10 +1111,10 @@ IMPORTANT:
                 borderRadius: '5px',
             }
         }
-    }
+    }, [])
 
     // Custom day styling for abnormal symptom periods
-    const dayPropGetter = (date: Date) => {
+    const dayPropGetter = useCallback((date: Date) => {
         const isAbnormalDate = abnormalDateRanges.some(range => {
             // Convert all dates to YYYY-MM-DD strings for simpler comparison
             const currentDateStr = date.toISOString().split('T')[0]
@@ -1031,7 +1136,7 @@ IMPORTANT:
         }
 
         return {}
-    }
+    }, [abnormalDateRanges])
 
     // SQL Event Log Interface
     interface SQLEventLog {
@@ -1379,6 +1484,44 @@ IMPORTANT:
         setTimeout(() => setShowSQLLogs(true), 100)
     }
 
+    // Calendar navigation handlers
+    const handleViewChange = useCallback((view: typeof Views[keyof typeof Views]) => {
+        setCurrentView(view)
+    }, [])
+
+    const handleNavigate = useCallback((action: 'PREV' | 'NEXT' | 'TODAY') => {
+        if (action === 'TODAY') {
+            setCurrentDate(new Date())
+        } else if (action === 'PREV') {
+            setCurrentDate(prev => {
+                if (currentView === Views.MONTH) {
+                    return moment(prev).subtract(1, 'month').toDate()
+                } else if (currentView === Views.WEEK) {
+                    return moment(prev).subtract(1, 'week').toDate()
+                } else if (currentView === Views.DAY) {
+                    return moment(prev).subtract(1, 'day').toDate()
+                }
+                return prev
+            })
+        } else if (action === 'NEXT') {
+            setCurrentDate(prev => {
+                if (currentView === Views.MONTH) {
+                    return moment(prev).add(1, 'month').toDate()
+                } else if (currentView === Views.WEEK) {
+                    return moment(prev).add(1, 'week').toDate()
+                } else if (currentView === Views.DAY) {
+                    return moment(prev).add(1, 'day').toDate()
+                }
+                return prev
+            })
+        }
+    }, [currentView])
+
+    // React Big Calendar navigation handler
+    const handleCalendarNavigate = useCallback((newDate: Date) => {
+        setCurrentDate(newDate)
+    }, [])
+
     // console.log('Available functions:', { deleteEvent, getSQLLogs, clearSQLLogs })
 
     return (
@@ -1440,68 +1583,87 @@ IMPORTANT:
                                 </div>
                             </div>
                         ) : (
-                            <>
-                                <DragAndDropCalendar
-                                    defaultDate={defaultDate}
-                                    defaultView={Views.MONTH}
-                                    views={[Views.MONTH, Views.WEEK, Views.DAY]}
-                                    events={myEvents}
-                                    localizer={localizer}
-                                    onEventDrop={moveEvent}
-                                    onEventResize={resizeEvent}
-                                    onSelectEvent={handleEventClick}
-                                    components={{
-                                        event: CustomEvent
-                                    }}
-                                    popup
-                                    resizable
-                                    selectable
-                                    eventPropGetter={eventStyleGetter}
-                                    dayPropGetter={dayPropGetter}
-                                    className="rbc-calendar h-full"
-                                    style={{ height: '100%' }}
-                                    toolbar={true}
-                                    showMultiDayTimes={true}
-                                />
-
-                                {/* Floating Action Button - positioned relative to calendar */}
-                                <motion.button
-                                    onClick={() => setShowQuickAdd(!showQuickAdd)}
-                                    className="absolute bottom-4 right-4 w-14 h-14 bg-primary text-primary-foreground rounded-full shadow-sm hover:bg-primary/90 hover:shadow-md transition-all duration-200 flex items-center justify-center z-40 hover:cursor-pointer"
-                                    initial={{ scale: 0, rotate: -180 }}
-                                    animate={{ scale: 1, rotate: 0 }}
-                                    transition={{ duration: 0.5, delay: 0.8, type: "spring", stiffness: 200 }}
-                                    whileHover={{ scale: 1.1 }}
-                                    whileTap={{ scale: 0.95 }}
+                            <div className="h-full flex flex-col">
+                                {/* Custom Toolbar */}
+                                <motion.div
+                                    initial={{ opacity: 0, y: -10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.3, delay: 0.1 }}
+                                    className="flex-shrink-0"
                                 >
-                                    <motion.div
-                                        animate={{ rotate: showQuickAdd ? 45 : 0 }}
-                                        transition={{ duration: 0.2 }}
-                                    >
-                                        {showQuickAdd ? (
-                                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                            </svg>
-                                        ) : (
-                                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                                            </svg>
-                                        )}
-                                    </motion.div>
-                                </motion.button>
+                                    <CustomToolbar
+                                        view={currentView}
+                                        date={currentDate}
+                                        onView={handleViewChange}
+                                        onNavigate={handleNavigate}
+                                    />
+                                </motion.div>
 
-                                {/* SQL Logs Button */}
-                                {/* <button
-                                    onClick={() => setShowSQLLogs(!showSQLLogs)}
-                                    className="absolute bottom-4 right-20 w-12 h-12 bg-secondary text-secondary-foreground rounded-full shadow-lg hover:bg-secondary/90 hover:shadow-xl transition-all duration-200 flex items-center justify-center z-40 hover:cursor-pointer"
-                                    title="View SQL Logs"
-                                >
-                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                    </svg>
-                                </button> */}
-                            </>
+                                <div className="flex-1 min-h-0">
+                                    <DragAndDropCalendar
+                                        date={currentDate}
+                                        view={currentView}
+                                        onView={handleViewChange}
+                                        onNavigate={handleCalendarNavigate}
+                                        views={[Views.MONTH, Views.WEEK, Views.DAY]}
+                                        events={myEvents}
+                                        localizer={localizer}
+                                        onEventDrop={moveEvent}
+                                        onEventResize={resizeEvent}
+                                        onSelectEvent={handleEventClick}
+                                        components={{
+                                            event: CustomEvent,
+                                            toolbar: () => null
+                                        }}
+                                        popup
+                                        resizable
+                                        selectable
+                                        eventPropGetter={eventStyleGetter}
+                                        dayPropGetter={dayPropGetter}
+                                        style={{ height: '100%' }}
+                                    />
+                                </div>
+                            </div>
                         )}
+
+                        {/* Floating Action Button - positioned absolute relative to calendar container */}
+                        {isAuthenticated && (
+                            <motion.button
+                                onClick={() => setShowQuickAdd(!showQuickAdd)}
+                                className="absolute bottom-4 right-4 w-14 h-14 bg-primary text-primary-foreground rounded-full shadow-sm hover:bg-primary/90 hover:shadow-md transition-all duration-200 flex items-center justify-center z-40 hover:cursor-pointer"
+                                initial={{ scale: 0, rotate: -180 }}
+                                animate={{ scale: 1, rotate: 0 }}
+                                transition={{ duration: 0.5, delay: 0.8, type: "spring", stiffness: 200 }}
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.95 }}
+                            >
+                                <motion.div
+                                    animate={{ rotate: showQuickAdd ? 45 : 0 }}
+                                    transition={{ duration: 0.2 }}
+                                >
+                                    {showQuickAdd ? (
+                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                    ) : (
+                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                                        </svg>
+                                    )}
+                                </motion.div>
+                            </motion.button>
+                        )}
+
+                        {/* SQL Logs Button */}
+                        {/* <button
+                            onClick={() => setShowSQLLogs(!showSQLLogs)}
+                            className="absolute bottom-4 right-20 w-12 h-12 bg-secondary text-secondary-foreground rounded-full shadow-lg hover:bg-secondary/90 hover:shadow-xl transition-all duration-200 flex items-center justify-center z-40 hover:cursor-pointer"
+                            title="View SQL Logs"
+                        >
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
+                        </button> */}
                     </div>
                 </motion.div>
 
@@ -2349,7 +2511,7 @@ IMPORTANT:
                                 </div>
                                 <div className="flex items-center gap-2">
                                     {/* Debug buttons for health models */}
-                                    <button
+                                    {/* <button
                                         onClick={() => callPhysicalModel(['fatigue', 'headache', 'nausea'])}
                                         className="text-muted-foreground hover:text-foreground transition-colors px-2 py-1 rounded text-xs border border-border"
                                         title="Test Physical Model"
@@ -2362,7 +2524,7 @@ IMPORTANT:
                                         title="Test Mental Model"
                                     >
                                         Mental
-                                    </button>
+                                    </button> */}
                                     <button
                                         onClick={clearChat}
                                         className="text-muted-foreground hover:text-foreground transition-colors p-1 rounded"

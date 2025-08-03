@@ -10,6 +10,7 @@ import Navbar from '@/components/Navbar'
 import { motion } from 'framer-motion'
 import { Download, Trash2, AlertTriangle, User, Hospital } from 'lucide-react'
 import { useTranslation } from 'react-i18next'
+import moment from 'moment'
 
 export const Route = createFileRoute('/settings')({
     component: Settings,
@@ -272,33 +273,124 @@ function Settings() {
                     filter: `user_id = "${user.id}"`
                 })
 
-                const exportData = {
-                    user: {
-                        name: user.name,
-                        email: user.email
-                    },
-                    healthcareProvider: providers.items.length > 0 ? providers.items[0] : null,
-                    healthEvents: events.items,
-                    exportDate: new Date().toISOString(),
-                    summary: {
-                        totalEvents: events.items.length,
-                        dateRange: events.items.length > 0 ? {
-                            from: events.items[events.items.length - 1].date,
-                            to: events.items[0].date
-                        } : null
+                // Get user info
+                const userInfoRecords = await pb.collection('user_info').getList(1, 1, {
+                    filter: `user_id = "${user.id}"`
+                })
+
+                // Format data as readable text
+                let exportText = `MEDICAL MOLE - HEALTH DATA EXPORT\n`
+                exportText += `========================================\n\n`
+                exportText += `Export Date: ${moment().format('MMMM D, YYYY [at] h:mm A')}\n\n`
+
+                // User Information
+                exportText += `USER INFORMATION\n`
+                exportText += `----------------\n`
+                exportText += `Name: ${user.name || 'Not provided'}\n`
+                exportText += `Email: ${user.email || 'Not provided'}\n`
+                if (userInfoRecords.items.length > 0) {
+                    const userInfo = userInfoRecords.items[0]
+                    exportText += `Age: ${userInfo.age || 'Not provided'}\n`
+                    exportText += `Gender: ${userInfo.gender || 'Not provided'}\n`
+                }
+                exportText += `\n`
+
+                // Healthcare Provider Information
+                exportText += `HEALTHCARE PROVIDER\n`
+                exportText += `-------------------\n`
+                if (providers.items.length > 0) {
+                    const provider = providers.items[0]
+                    exportText += `Name: ${provider.name || 'Not provided'}\n`
+                    exportText += `Phone: ${provider.phone || 'Not provided'}\n`
+                    exportText += `Email: ${provider.email || 'Not provided'}\n`
+                    exportText += `Address: ${provider.address || 'Not provided'}\n`
+                } else {
+                    exportText += `No healthcare provider information saved.\n`
+                }
+                exportText += `\n`
+
+                // Health Events Summary
+                exportText += `HEALTH EVENTS SUMMARY\n`
+                exportText += `---------------------\n`
+                exportText += `Total Events: ${events.items.length}\n`
+
+                if (events.items.length > 0) {
+                    // Sort events by date (newest first)
+                    const sortedEvents = events.items.sort((a, b) => {
+                        const dateA = moment(a.start).valueOf()
+                        const dateB = moment(b.start).valueOf()
+                        return dateB - dateA
+                    })
+
+                    const dateRange = {
+                        from: moment(sortedEvents[sortedEvents.length - 1].start).format('MMMM D, YYYY'),
+                        to: moment(sortedEvents[0].start).format('MMMM D, YYYY')
                     }
+                    exportText += `Date Range: ${dateRange.from} to ${dateRange.to}\n\n`                    // Event type breakdown
+                    const eventTypes = events.items.reduce((acc: any, event) => {
+                        acc[event.type] = (acc[event.type] || 0) + 1
+                        return acc
+                    }, {})
+
+                    exportText += `Event Types:\n`
+                    Object.entries(eventTypes).forEach(([type, count]) => {
+                        exportText += `  • ${type}: ${count} events\n`
+                    })
+                    exportText += `\n`
+
+                    // Detailed Event List
+                    exportText += `DETAILED HEALTH EVENTS\n`
+                    exportText += `======================\n\n`
+
+                    sortedEvents.forEach((event, index) => {
+                        const startDate = moment(event.start)
+                        const endDate = moment(event.end)
+
+                        exportText += `${index + 1}. ${event.title}\n`
+                        exportText += `   Date: ${startDate.format('MMMM D, YYYY')}\n`
+                        exportText += `   Time: ${startDate.format('h:mm A')} - ${endDate.format('h:mm A')}\n`
+                        exportText += `   Type: ${event.type}\n`
+
+                        if (event.description) {
+                            exportText += `   Description: ${event.description}\n`
+                        }
+
+                        // Event-specific data
+                        if (event.eventData) {
+                            const data = event.eventData
+                            if (data.painLevel) exportText += `   Pain Level: ${data.painLevel}\n`
+                            if (data.severity) exportText += `   Severity: ${data.severity}/10\n`
+                            if (data.location) exportText += `   Location: ${data.location}\n`
+                            if (data.medication) exportText += `   Medication: ${data.medication}\n`
+                            if (data.dosage) exportText += `   Dosage: ${data.dosage}\n`
+                            if (data.frequency) exportText += `   Frequency: ${data.frequency}\n`
+                            if (data.doctorName) exportText += `   Doctor: ${data.doctorName}\n`
+                            if (data.appointmentType) exportText += `   Appointment Type: ${data.appointmentType}\n`
+                            if (data.notes) exportText += `   Notes: ${data.notes}\n`
+                        }
+                        exportText += `\n`
+                    })
+                } else {
+                    exportText += `No health events recorded.\n\n`
                 }
 
+                // Footer
+                exportText += `\n========================================\n`
+                exportText += `End of Medical Mole Health Data Export\n`
+                exportText += `Generated on ${moment().format('MMMM D, YYYY [at] h:mm A')}\n`
+
                 // Create and download file
-                const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' })
+                const blob = new Blob([exportText], { type: 'text/plain' })
                 const url = URL.createObjectURL(blob)
                 const a = document.createElement('a')
                 a.href = url
-                a.download = `medical-mole-data-${new Date().toISOString().split('T')[0]}.json`
+                a.download = `medical-mole-health-data-${moment().format('YYYY-MM-DD')}.txt`
                 document.body.appendChild(a)
                 a.click()
                 document.body.removeChild(a)
                 URL.revokeObjectURL(url)
+
+                alert('Health data exported successfully!')
             }
         } catch (error: any) {
             if (!error?.message?.includes('autocancelled')) {

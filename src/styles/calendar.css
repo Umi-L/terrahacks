@@ -128,3 +128,171 @@
 .rbc-addons-dnd-over {
     background-color: var(--accent) !important;
 }
+
+/* Week View Styles */
+.rbc-time-view {
+    height: calc(100% - 60px) !important;
+    border-radius: var(--radius-md) !important;
+    border: 1px solid var(--border) !important;
+    overflow: hidden !important;
+}
+
+.rbc-time-header {
+    background-color: var(--muted) !important;
+    border-bottom: 1px solid var(--border) !important;
+}
+
+.rbc-time-header-content {
+    border-left: 1px solid var(--border) !important;
+}
+
+.rbc-time-header-cell {
+    background-color: var(--muted) !important;
+    border-right: 1px solid var(--border) !important;
+    padding: 0.75rem 0.5rem !important;
+    font-weight: 600 !important;
+    color: var(--foreground) !important;
+}
+
+.rbc-time-header-gutter {
+    background-color: var(--muted) !important;
+    border-right: 1px solid var(--border) !important;
+}
+
+.rbc-time-content {
+    border-left: 1px solid var(--border) !important;
+}
+
+.rbc-time-gutter {
+    background-color: var(--card) !important;
+    border-right: 1px solid var(--border) !important;
+}
+
+.rbc-time-slot {
+    border-top: 1px solid var(--border) !important;
+    color: var(--muted-foreground) !important;
+    font-size: 0.75rem !important;
+}
+
+.rbc-timeslot-group {
+    border-bottom: 1px solid var(--border) !important;
+}
+
+.rbc-day-slot {
+    border-right: 1px solid var(--border) !important;
+}
+
+.rbc-current-time-indicator {
+    background-color: var(--destructive) !important;
+    height: 2px !important;
+    z-index: 3 !important;
+}
+
+.rbc-current-time-indicator::before {
+    background-color: var(--destructive) !important;
+    border-radius: 50% !important;
+    width: 8px !important;
+    height: 8px !important;
+    margin-left: -4px !important;
+}
+
+/* Day View Specific Styles */
+.rbc-day-view .rbc-time-header-cell {
+    text-align: center !important;
+    font-size: 1rem !important;
+}
+
+.rbc-day-view .rbc-today {
+    background-color: var(--accent) !important;
+}
+
+/* Week and Day View Event Styles */
+.rbc-time-view .rbc-event {
+    border-radius: var(--radius-sm) !important;
+    padding: 0.25rem 0.5rem !important;
+    font-size: 0.75rem !important;
+    font-weight: 500 !important;
+    border: none !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
+}
+
+.rbc-time-view .rbc-event:hover {
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15) !important;
+}
+
+.rbc-time-view .rbc-event.rbc-selected {
+    box-shadow: 0 0 0 2px var(--ring) !important;
+}
+
+/* All Day Events in Week/Day View */
+.rbc-allday-cell {
+    background-color: var(--muted) !important;
+    border-bottom: 1px solid var(--border) !important;
+    padding: 0.5rem !important;
+}
+
+/* .rbc-row-content {
+    background-color: var(--background) !important;
+} */
+
+/* Time indicators */
+.rbc-label {
+    color: var(--muted-foreground) !important;
+    font-size: 0.75rem !important;
+    font-weight: 500 !important;
+    padding: 0.25rem 0.5rem !important;
+}
+
+/* Agenda View Styles */
+.rbc-agenda-view {
+    height: calc(100% - 60px) !important;
+    border-radius: var(--radius-md) !important;
+    border: 1px solid var(--border) !important;
+    overflow: hidden !important;
+}
+
+.rbc-agenda-table {
+    background-color: var(--background) !important;
+}
+
+.rbc-agenda-table thead {
+    background-color: var(--muted) !important;
+}
+
+.rbc-agenda-table thead th {
+    background-color: var(--muted) !important;
+    border-bottom: 1px solid var(--border) !important;
+    border-right: 1px solid var(--border) !important;
+    padding: 0.75rem !important;
+    font-weight: 600 !important;
+    color: var(--foreground) !important;
+}
+
+.rbc-agenda-table tbody td {
+    border-bottom: 1px solid var(--border) !important;
+    border-right: 1px solid var(--border) !important;
+    padding: 0.75rem !important;
+    color: var(--foreground) !important;
+}
+
+.rbc-agenda-table tbody tr:hover {
+    background-color: var(--muted) !important;
+}
+
+.rbc-agenda-date-cell {
+    font-weight: 600 !important;
+    color: var(--foreground) !important;
+}
+
+.rbc-agenda-time-cell {
+    color: var(--muted-foreground) !important;
+    font-size: 0.875rem !important;
+}
+
+.rbc-agenda-event-cell {
+    color: var(--foreground) !important;
+}
+
+.rbc-time-header-cell {
+    height: 100px !important;
+}

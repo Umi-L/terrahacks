@@ -16,6 +16,24 @@ export const useGeminiChat = () => {
     const { t, i18n } = useTranslation()
     const { callPhysicalModel, callMentalModel, physicalModelSymptoms, mentalModelSymptoms } = useHealthModels()
 
+    // Get user's preferred language
+    const userLanguage = i18n.language || 'en'
+    const languageNames: Record<string, string> = {
+        'en': 'English',
+        'es': 'Spanish',
+        'fr': 'French',
+        'de': 'German',
+        'it': 'Italian',
+        'pt': 'Portuguese',
+        'ru': 'Russian',
+        'ja': 'Japanese',
+        'ko': 'Korean',
+        'zh': 'Chinese',
+        'ar': 'Arabic',
+        'hi': 'Hindi',
+        'ta': 'Tamil',
+    }
+
     const [messages, setMessages] = useState<ChatMessage[]>([
         {
             id: '1',
@@ -64,7 +82,7 @@ export const useGeminiChat = () => {
         }
 
         const messageLower = userMessage.toLowerCase()
-        
+
         // Skip analysis for common non-symptom phrases
         const skipPhrases = [
             'how are you',
@@ -79,7 +97,7 @@ export const useGeminiChat = () => {
             'can you help',
             'how does this work'
         ]
-        
+
         const shouldSkip = skipPhrases.some(phrase => messageLower.includes(phrase))
         if (shouldSkip) {
             return ''
@@ -94,6 +112,8 @@ export const useGeminiChat = () => {
 
             // Create symptom extraction prompt
             const extractionPrompt = `You are a medical symptom extraction assistant. Analyze the following user message and extract any symptoms that match the provided symptom lists.
+The user's preferred language is ${languageNames[userLanguage] || 'English'}.
+Ensure your responses are done in the user's preferred language.
 
 User message: "${userMessage}"
 
@@ -137,12 +157,12 @@ Only include symptoms that are explicitly mentioned or clearly implied in the us
             let mlResults = ''
 
             // Only call models if we have detected symptoms and they meet minimum criteria
-            const minSymptomsForAnalysis = 1 // Minimum number of symptoms to trigger analysis
+            const minSymptomsForAnalysis = 3 // Minimum number of symptoms to trigger analysis
 
             // Call physical model if physical symptoms detected
             if (detectedPhysicalSymptoms.length >= minSymptomsForAnalysis) {
                 console.log('🔬 Calling physical model with symptoms:', detectedPhysicalSymptoms)
-                
+
                 try {
                     const physicalResult = await callPhysicalModel(detectedPhysicalSymptoms)
                     if (physicalResult.success && physicalResult.data) {
@@ -159,7 +179,7 @@ Only include symptoms that are explicitly mentioned or clearly implied in the us
             // Call mental model if mental symptoms detected
             if (detectedMentalSymptoms.length >= minSymptomsForAnalysis) {
                 console.log('🧠 Calling mental model with symptoms:', detectedMentalSymptoms)
-                
+
                 try {
                     const mentalResult = await callMentalModel(detectedMentalSymptoms)
                     if (mentalResult.success && mentalResult.data) {
@@ -225,8 +245,13 @@ Only include symptoms that are explicitly mentioned or clearly implied in the us
             const currentDateStr = currentDate.toISOString().split('T')[0]
             const currentTimeStr = currentDate.toTimeString().slice(0, 5)
 
+            console.log("users preferred language:", userLanguage, languageNames[userLanguage])
+
             // Create context-aware prompt
             let prompt = `You are a helpful health assistant focused on symptom tracking and health management.
+
+The user's preferred language is ${languageNames[userLanguage] || 'English'}.
+Ensure your responses are done in the user's preferred language.
 
 Current context:
 - Today's date: ${currentDateStr}
@@ -351,7 +376,7 @@ CRITICAL: When user mentions a time period (yesterday, this morning, last week, 
 
             // Add ML analysis results if available
             if (mlAnalysis) {
-                prompt += `\nMachine Learning Analysis Results:\n${mlAnalysis}\n\nPlease consider this AI analysis as additional context for your response, but always emphasize that this is NOT a medical diagnosis and the user should consult with healthcare professionals.`
+                prompt += `\nMachine Learning Analysis Results:\n${mlAnalysis}\nDisregard this input if the symptoms are too vague or the disease seems too severe for the given symptoms.\n\nPlease consider this AI analysis as additional context for your response, but always emphasize that this is NOT a medical diagnosis and the user should consult with healthcare professionals.`
             }
 
             const result = await model.generateContent(prompt)

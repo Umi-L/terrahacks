@@ -40,7 +40,7 @@ export default function Navbar() {
     // Desktop menu items
     const menu = [
         { title: t('nav.dashboard'), url: "/home" },
-        { title: t('nav.about'), url: "/about" },
+        // { title: t('nav.about'), url: "/about" },
     ];
 
     // Get user initials for profile picture

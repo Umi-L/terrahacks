@@ -188,7 +188,7 @@
         "frequencyPlaceholder": "e.g., twice daily, every 6 hours",
         "doctorPlaceholder": "Dr. Smith",
         "appointmentTypePlaceholder": "e.g., Check-up, Follow-up",
-        "chatPlaceholder": "Ask about your symptoms, patterns, or health...",
+        "chatPlaceholder": "Ask about your symptoms...",
         "severity": "Severity",
         "startDate": "Start Date",
         "startTime": "Start Time",
@@ -228,7 +228,7 @@
         },
         "chatTitle": "Your Medical Mole",
         "chatSubtitle": "AI-powered symptom analysis",
-        "chatWelcome": "Hi! I'm your health assistant. I can help you analyze your symptoms, track patterns, and provide health recommendations. How can I assist you today?",
+        "chatWelcome": "Hi! I'm your health assistant. I can help you analyze your symptoms, track patterns, and help you with your health. How can I assist you today?",
         "disclaimer": "Disclaimer: Nothing provided in this chat is medical advice. Always contact a medical professional in the case of an emergency.",
         "event": "Event"
     },
